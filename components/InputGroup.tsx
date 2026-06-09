@@ -17,6 +17,10 @@ interface InputGroupProps {
   isCurrency?: boolean;
   presets?: Preset[];
   secondaryLabel?: string;
+  error?: string;
+  onBlur?: () => void;
+  readOnly?: boolean;
+  allowDecimals?: boolean;
 }
 
 export const InputGroup: React.FC<InputGroupProps> = ({
@@ -29,16 +33,73 @@ export const InputGroup: React.FC<InputGroupProps> = ({
   suffix,
   isCurrency = false,
   presets,
-  secondaryLabel
+  secondaryLabel,
+  error,
+  onBlur,
+  readOnly = false,
+  allowDecimals = false
 }) => {
-  
+
+  const formatNumber = (num: number): string => {
+    if (isNaN(num)) return '';
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  };
+
+  // Инициализируем локальное состояние значением из пропсов
+  const [inputValue, setInputValue] = React.useState(value === 0 ? '' : formatNumber(value));
+
+  const parseNumber = (str: string): number => {
+    // Заменяем запятую на точку для парсинга
+    return parseFloat(str.replace(/\s/g, '').replace(',', '.'));
+  };
+
+  // Синхронизация локального состояния с внешним value
+  React.useEffect(() => {
+    const formatted = value === 0 ? '' : formatNumber(value);
+
+    if (!allowDecimals) {
+      // Для обычных полей (без дробей) всегда форматируем (добавляем пробелы)
+      setInputValue(formatted);
+    } else {
+      // Для полей с дробями обновляем только если значение реально изменилось извне
+      // Это позволяет сохранить "12," или "12.0" при вводе, не сбрасывая форматирование
+      const currentParsed = parseNumber(inputValue);
+      if (currentParsed !== value) {
+        setInputValue(formatted);
+      }
+    }
+  }, [value, allowDecimals]); // inputValue не добавляем, чтобы не зациклить
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseFloat(e.target.value);
+    if (readOnly) return;
+
+    let rawValue = e.target.value;
+
+    // Фильтрация ввода
+    if (allowDecimals) {
+      // Разрешаем цифры, пробелы, точку и запятую
+      rawValue = rawValue.replace(/[^\d\s.,]/g, '');
+    } else {
+      // Только цифры и пробелы
+      rawValue = rawValue.replace(/[^\d\s]/g, '');
+    }
+
+    // Сразу обновляем локальное состояние, чтобы отобразить ввод пользователя (включая запятые)
+    setInputValue(rawValue);
+
+    let val = parseNumber(rawValue);
+
+    // Ограничение по максимальному значению при вводе
+    if (!isNaN(val) && max !== undefined && val > max) {
+      val = max;
+      // Если превысили макс, обновляем и локальное состояние тоже
+      setInputValue(formatNumber(val));
+    }
+
     if (!isNaN(val)) {
       onChange(val);
-    } else if (e.target.value === '') {
-        // Разрешить временную очистку ввода
-        onChange(0);
+    } else if (rawValue.trim() === '') {
+      onChange(0);
     }
   };
 
@@ -47,28 +108,37 @@ export const InputGroup: React.FC<InputGroupProps> = ({
       <label className="text-sm font-semibold text-slate-700">{label}</label>
       <div className="relative">
         <input
-          type="number"
-          value={value === 0 ? '' : value}
+          type="text"
+          inputMode={allowDecimals ? "decimal" : "numeric"}
+          value={inputValue}
           onChange={handleInputChange}
-          className={`w-full pl-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-slate-900 font-bold shadow-sm hover:border-slate-300 placeholder-slate-400 ${suffix || secondaryLabel ? 'pr-24' : 'pr-4'}`}
-          min={min}
-          max={max}
+          onBlur={onBlur}
+          readOnly={readOnly}
+          className={`w-full pl-4 py-3 border rounded-xl outline-none transition-all font-bold shadow-sm ${readOnly
+            ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed'
+            : `bg-white text-slate-900 ${error ? 'border-rose-500 focus:border-rose-500 focus:ring-2 focus:ring-rose-200' : 'border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 hover:border-slate-300'}`
+            } ${suffix || secondaryLabel ? 'pr-24' : 'pr-4'}`}
+        // min/max attributes don't work the same on type="text", validation should be handled in onChange or parent if strict
         />
-        
+
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
-            {secondaryLabel && (
-                <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap">
-                    {secondaryLabel}
-                </span>
-            )}
-            {suffix && (
-              <span className="text-slate-400 text-sm font-medium">
-                {suffix}
-              </span>
-            )}
+          {secondaryLabel && (
+            <span className="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap">
+              {secondaryLabel}
+            </span>
+          )}
+          {suffix && (
+            <span className="text-slate-400 text-sm font-medium">
+              {suffix}
+            </span>
+          )}
         </div>
       </div>
-      
+
+      {error && (
+        <p className="text-[10px] text-rose-500 font-medium leading-tight">{error}</p>
+      )}
+
       {presets && presets.length > 0 && (
         <div className="flex gap-2 mt-1 flex-wrap">
           {presets.map((preset) => (

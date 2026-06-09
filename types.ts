@@ -34,10 +34,18 @@ export interface PropertyInfo {
   floor: string;
   managerName?: string;
   managerPhone?: string;
+  managerEmail?: string;
   price?: string; // Цена объекта в формате строки (например, "8 113 602")
+  complexName?: string;
+  apartmentName?: string;
+  layoutImage?: string;
+  status?: string; // Статус объекта (сдан, строится и т.д.)
+  deliveryDeadline?: string; // Срок сдачи
+  description?: string; // Описание ЖК
 }
 
 export enum ViewMode {
   Summary = 'summary',
   Schedule = 'schedule',
+  Object = 'object',
 }
