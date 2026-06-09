@@ -401,25 +401,6 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                         ]}
                     />
 
-                    <div className="flex flex-col gap-2">
-                        <label className="text-sm font-semibold text-slate-700">Дата выдачи</label>
-                        <div
-                            className="relative cursor-pointer"
-                            onClick={openDatePicker}
-                        >
-                            <input
-                                ref={dateInputRef}
-                                type="date"
-                                value={input.startDate}
-                                onChange={(e) => setInput({ ...input, startDate: e.target.value })}
-                                onClick={openDatePicker}
-                                onFocus={openDatePicker}
-                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-slate-900 font-bold shadow-sm hover:border-slate-300 placeholder-slate-400 cursor-pointer"
-                            />
-                            <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
-                        </div>
-                    </div>
-
                 </div>
 
                 {/* Кнопка навигации для мобильных/планшетов (Внизу ввода) */}
@@ -469,7 +450,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                     <h2 className="text-lg md:text-xl font-bold text-slate-800 mb-4">Результаты расчета</h2>
 
                     {/* Основные ключевые метрики - Адаптивная сетка */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
                         {/* Ежемесячный платеж */}
                         <div className="p-4 md:p-5 bg-emerald-600 rounded-2xl text-white shadow-lg shadow-emerald-200/50">
                             <div className="text-emerald-100 text-xs md:text-sm font-medium mb-1">Ежемесячный платеж</div>
@@ -488,25 +469,10 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                             <div className="text-slate-500 text-xs md:text-sm font-medium mb-1">Процентная ставка</div>
                             <div className="text-lg md:text-2xl font-bold text-slate-800 tracking-tight">{input.interestRate}%</div>
                         </div>
-
-                        {/* Минимальный доход */}
-                        <div className="p-4 md:p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                            <div className="flex items-center gap-1 text-slate-500 text-xs md:text-sm font-medium mb-1">
-                                Необходимый доход
-                                <div className="relative group/tooltip hidden md:block">
-                                    <HelpCircle size={14} className="cursor-help text-slate-400 hover:text-slate-600 transition-colors" />
-                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-3 bg-slate-800 text-white text-xs rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all z-50 text-center pointer-events-none shadow-xl normal-case font-normal">
-                                        Ежемесячный платеж по кредитам не может превышать 50% от среднего дохода заемщика за последние 6 месяцев
-                                        <div className="absolute left-1/2 -translate-x-1/2 top-full border-4 border-transparent border-t-slate-800"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="text-lg md:text-2xl font-bold text-slate-800 tracking-tight">{formatCurrency(minIncome)}</div>
-                        </div>
                     </div>
 
                     {/* Сетка детальных метрик - Остальные элементы */}
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-y-4 gap-x-2 md:gap-4">
+                    <div className="grid grid-cols-2 gap-y-4 gap-x-2 md:gap-4">
                         {/* Срок */}
                         <div className="p-2 md:p-0">
                             <div className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Срок</div>
@@ -517,24 +483,6 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                         <div className="p-2 md:p-0">
                             <div className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Дата 1-го платежа</div>
                             <div className="font-semibold text-slate-700 text-sm md:text-base">{firstPaymentDate ? formatDate(firstPaymentDate) : '-'}</div>
-                        </div>
-
-                        {/* Дата последнего платежа */}
-                        <div className="p-2 md:p-0">
-                            <div className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Дата посл. платежа</div>
-                            <div className="font-semibold text-slate-700 text-sm md:text-base">{lastPaymentDate ? formatDate(lastPaymentDate) : '-'}</div>
-                        </div>
-
-                        {/* Общая сумма выплат */}
-                        <div className="p-2 md:p-0">
-                            <div className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Общая сумма выплат</div>
-                            <div className="font-semibold text-slate-700 text-sm md:text-base">{formatCurrency(result.totalPayment)}</div>
-                        </div>
-
-                        {/* Начисленные проценты */}
-                        <div className="p-2 md:p-0">
-                            <div className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Начисленные проценты</div>
-                            <div className="font-semibold text-slate-700 text-sm md:text-base">{formatCurrency(result.totalInterest)}</div>
                         </div>
                     </div>
 
