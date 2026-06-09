@@ -9,7 +9,7 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid,
     BarChart, Bar
 } from 'recharts';
-import { Download, Table, PieChart as PieIcon, X, Calendar, HelpCircle, Loader2, ChevronRight, LayoutDashboard, Settings2, Building2, Wallet } from 'lucide-react';
+import { Download, Table, PieChart as PieIcon, X, Calendar, HelpCircle, Loader2, ChevronRight, LayoutDashboard, Settings2, Building2, Wallet, CalendarDays } from 'lucide-react';
 
 interface MortgageCalculatorProps {
     onClose: () => void;
@@ -365,34 +365,34 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                             <div className="relative">
                                 <div className="absolute inset-0 left-[8px] right-[8px] pointer-events-none z-20">
                                     {/* Метка 10.5% сверху */}
-                                    <div className="absolute bottom-full mb-1 flex flex-col items-center" style={{left: '10.5%', transform: 'translateX(-50%)'}}>
+                                    <div className="absolute bottom-full mb-1 flex flex-col items-center" style={{ left: '10.5%', transform: 'translateX(-50%)' }}>
                                         <span className={`transition-all ${Math.abs(downPaymentPercentage - 10.5) < 0.5 ? 'text-emerald-600 font-bold text-[12px]' : 'text-slate-500 text-[11px]'}`}>10.5%</span>
                                         <div className="w-px h-2 rounded-full bg-slate-200 mt-0.5"></div>
                                     </div>
                                     {/* Точка 10.5% */}
-                                    <div 
-                                        className={`absolute top-1/2 -mt-[3px] w-1.5 h-1.5 rounded-full transition-colors duration-300 shadow-sm ${downPaymentPercentage >= 10.5 ? 'bg-white' : 'bg-slate-400'}`} 
-                                        style={{left: '10.5%', transform: 'translateX(-50%)'}}
+                                    <div
+                                        className={`absolute top-1/2 -mt-[3px] w-1.5 h-1.5 rounded-full transition-colors duration-300 shadow-sm ${downPaymentPercentage >= 10.5 ? 'bg-white' : 'bg-slate-400'}`}
+                                        style={{ left: '10.5%', transform: 'translateX(-50%)' }}
                                     ></div>
-                                    
+
                                     {/* Точка 20.1% */}
-                                    <div 
-                                        className={`absolute top-1/2 -mt-[3px] w-1.5 h-1.5 rounded-full transition-colors duration-300 shadow-sm ${downPaymentPercentage >= 20.1 ? 'bg-white' : 'bg-slate-400'}`} 
-                                        style={{left: '20.1%', transform: 'translateX(-50%)'}}
+                                    <div
+                                        className={`absolute top-1/2 -mt-[3px] w-1.5 h-1.5 rounded-full transition-colors duration-300 shadow-sm ${downPaymentPercentage >= 20.1 ? 'bg-white' : 'bg-slate-400'}`}
+                                        style={{ left: '20.1%', transform: 'translateX(-50%)' }}
                                     ></div>
                                     {/* Метка 20.1% снизу */}
-                                    <div className="absolute top-full mt-1 flex flex-col items-center" style={{left: '20.1%', transform: 'translateX(-50%)'}}>
+                                    <div className="absolute top-full mt-1 flex flex-col items-center" style={{ left: '20.1%', transform: 'translateX(-50%)' }}>
                                         <div className="w-px h-2 rounded-full bg-slate-200 mb-0.5"></div>
                                         <span className={`transition-all ${Math.abs(downPaymentPercentage - 20.1) < 0.5 ? 'text-emerald-600 font-bold text-[12px]' : 'text-slate-500 text-[11px]'}`}>20.1%</span>
                                     </div>
                                 </div>
 
-                                <input 
-                                    type="range" 
-                                    min="0" 
-                                    max="100" 
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
                                     step="0.1"
-                                    value={downPaymentPercentage} 
+                                    value={downPaymentPercentage}
                                     onChange={(e) => {
                                         let v = parseFloat(e.target.value);
                                         // Притягивание к ключевым отметкам при свободном перемещении
@@ -436,22 +436,44 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                         allowDecimals={true}
                     />
 
-                    <InputGroup
-                        label="Срок кредита (лет)"
-                        value={input.years}
-                        onChange={(v) => setInput({ ...input, years: v })}
-                        min={1}
-                        max={30}
-                        step={1}
-                        suffix="лет"
-                        presets={[
-                            { label: '10 лет', value: 10 },
-                            { label: '15 лет', value: 15 },
-                            { label: '20 лет', value: 20 },
-                            { label: '25 лет', value: 25 },
-                            { label: '30 лет', value: 30 },
-                        ]}
-                    />
+                    {/* Срок кредита — слайдер */}
+                    <div className="mb-2">
+                        <div className="flex justify-between items-end mb-4">
+                            <span className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                                <CalendarDays size={16} className="text-slate-400" />
+                                Срок кредита
+                            </span>
+                            <span className="text-lg font-bold text-slate-900">{input.years} лет</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="1"
+                            max="30"
+                            step="1"
+                            value={input.years}
+                            onChange={(e) => setInput({ ...input, years: parseInt(e.target.value) })}
+                            className="w-full h-2 bg-slate-200 hover:bg-slate-300 rounded-lg appearance-none cursor-pointer accent-emerald-600 transition-colors focus:outline-none"
+                        />
+                        <div className="flex justify-between text-xs text-slate-400 mt-0">
+                            <span>1 год</span>
+                            <span>30 лет</span>
+                        </div>
+                        {/* Кнопки быстрого выбора срока */}
+                        <div className="flex gap-2 mt-3">
+                            {[10, 15, 20, 25, 30].map((years) => (
+                                <button
+                                    key={years}
+                                    onClick={() => setInput({ ...input, years })}
+                                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${input.years === years
+                                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm'
+                                            : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
+                                        }`}
+                                >
+                                    {years} лет
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
                 </div>
 
