@@ -9,7 +9,7 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid,
     BarChart, Bar
 } from 'recharts';
-import { Download, Table, PieChart as PieIcon, X, Calendar, HelpCircle, Loader2, ChevronRight, LayoutDashboard, Settings2, Building2 } from 'lucide-react';
+import { Download, Table, PieChart as PieIcon, X, Calendar, HelpCircle, Loader2, ChevronRight, LayoutDashboard, Settings2, Building2, Wallet } from 'lucide-react';
 
 interface MortgageCalculatorProps {
     onClose: () => void;
@@ -349,25 +349,77 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                         readOnly={true}
                     />
 
-                    <InputGroup
-                        label="Первоначальный взнос"
-                        value={input.downPayment}
-                        onChange={handleDownPaymentChange}
-                        onBlur={handleDownPaymentBlur}
-                        min={minDownPaymentByLimit}
-                        max={input.propertyValue - 100000}
-                        step={50000}
-                        suffix="₽"
-                        secondaryLabel={`${downPaymentPercentage.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}%`}
-                        presets={[
-                            { label: '20.1%', value: Math.max(minDownPaymentByLimit, Math.round(input.propertyValue * 0.201)) },
-                            { label: '25%', value: Math.max(minDownPaymentByLimit, Math.round(input.propertyValue * 0.25)) },
-                            { label: '30%', value: Math.max(minDownPaymentByLimit, Math.round(input.propertyValue * 0.30)) },
-                            { label: '50%', value: Math.max(minDownPaymentByLimit, Math.round(input.propertyValue * 0.50)) },
-                        ]}
-                    />
+                    {/* Первоначальный взнос — слайдер */}
+                    <div className="mb-2">
+                        <div className="flex justify-between items-start mb-4">
+                            <span className="text-sm font-semibold text-slate-700 flex items-center gap-2 mt-1">
+                                <Wallet size={16} className="text-slate-400" />
+                                Первоначальный взнос
+                            </span>
+                            <div className="text-right">
+                                <div className="text-lg font-bold text-slate-900 leading-none mb-1">{formatCurrency(input.downPayment)}</div>
+                                <div className="text-sm text-slate-500 font-medium leading-none">{downPaymentPercentage.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}%</div>
+                            </div>
+                        </div>
+                        <div className="relative pb-8 pt-6 select-none group">
+                            <div className="relative">
+                                <div className="absolute inset-0 left-[8px] right-[8px] pointer-events-none z-20">
+                                    {/* Метка 10.5% сверху */}
+                                    <div className="absolute bottom-full mb-1 flex flex-col items-center" style={{left: '10.5%', transform: 'translateX(-50%)'}}>
+                                        <span className={`transition-all ${Math.abs(downPaymentPercentage - 10.5) < 0.5 ? 'text-emerald-600 font-bold text-[12px]' : 'text-slate-500 text-[11px]'}`}>10.5%</span>
+                                        <div className="w-px h-2 rounded-full bg-slate-200 mt-0.5"></div>
+                                    </div>
+                                    {/* Точка 10.5% */}
+                                    <div 
+                                        className={`absolute top-1/2 -mt-[3px] w-1.5 h-1.5 rounded-full transition-colors duration-300 shadow-sm ${downPaymentPercentage >= 10.5 ? 'bg-white' : 'bg-slate-400'}`} 
+                                        style={{left: '10.5%', transform: 'translateX(-50%)'}}
+                                    ></div>
+                                    
+                                    {/* Точка 20.1% */}
+                                    <div 
+                                        className={`absolute top-1/2 -mt-[3px] w-1.5 h-1.5 rounded-full transition-colors duration-300 shadow-sm ${downPaymentPercentage >= 20.1 ? 'bg-white' : 'bg-slate-400'}`} 
+                                        style={{left: '20.1%', transform: 'translateX(-50%)'}}
+                                    ></div>
+                                    {/* Метка 20.1% снизу */}
+                                    <div className="absolute top-full mt-1 flex flex-col items-center" style={{left: '20.1%', transform: 'translateX(-50%)'}}>
+                                        <div className="w-px h-2 rounded-full bg-slate-200 mb-0.5"></div>
+                                        <span className={`transition-all ${Math.abs(downPaymentPercentage - 20.1) < 0.5 ? 'text-emerald-600 font-bold text-[12px]' : 'text-slate-500 text-[11px]'}`}>20.1%</span>
+                                    </div>
+                                </div>
+
+                                <input 
+                                    type="range" 
+                                    min="0" 
+                                    max="100" 
+                                    step="0.1"
+                                    value={downPaymentPercentage} 
+                                    onChange={(e) => {
+                                        let v = parseFloat(e.target.value);
+                                        // Притягивание к ключевым отметкам при свободном перемещении
+                                        if (v < 20.1 && v !== 0) {
+                                            const marks = [0, 10.5, 20.1];
+                                            v = marks.reduce((prev, curr) => Math.abs(curr - v) < Math.abs(prev - v) ? curr : prev);
+                                        }
+                                        const newDownPayment = Math.round(input.propertyValue * (v / 100));
+                                        // Ограничение: кредит не может быть меньше 100 000 ₽
+                                        const maxDown = input.propertyValue - 100000;
+                                        handleDownPaymentChange(Math.min(newDownPayment, maxDown));
+                                    }}
+                                    onMouseUp={handleDownPaymentBlur}
+                                    onTouchEnd={handleDownPaymentBlur}
+                                    className="w-full h-2 bg-slate-200 hover:bg-slate-300 rounded-lg appearance-none cursor-pointer accent-emerald-600 flex relative z-10 transition-colors focus:outline-none"
+                                />
+                            </div>
+
+                            {/* Крайние метки 0% и 100% */}
+                            <div className="absolute left-0 right-0 top-6 text-[10px] font-medium pointer-events-none">
+                                <span className={`absolute left-0 top-[10px] transition-all ${downPaymentPercentage === 0 ? 'text-emerald-600 font-bold text-[12px]' : 'text-slate-400 text-[11px]'}`}>0%</span>
+                                <span className={`absolute right-0 top-[10px] transition-all ${downPaymentPercentage >= 99.9 ? 'text-emerald-600 font-bold text-[12px]' : 'text-slate-400 text-[11px]'}`}>100%</span>
+                            </div>
+                        </div>
+                    </div>
                     {mortgageType === 'family' && (
-                        <div className="flex items-start gap-2 mt-2 p-3 bg-orange-50 text-orange-700 rounded-xl text-xs font-medium border border-orange-100">
+                        <div className="flex items-start gap-2 -mt-2 mb-2 p-3 bg-orange-50 text-orange-700 rounded-xl text-xs font-medium border border-orange-100">
                             <HelpCircle size={16} className="shrink-0 mt-0.5" />
                             <span>Минимальный первоначальный взнос ограничен условиями кредитования - сумма кредита <b>не более 6 000 000 ₽</b></span>
                         </div>
