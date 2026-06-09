@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест виджета для MODX</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fade-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in-up {
+            animation: fade-in-up 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8">Тест виджета ипотечного калькулятора</h1>
+        
+        <div class="bg-white p-6 rounded-lg shadow mb-8">
+            <h2 class="text-xl font-semibold mb-4">Способ 1: Кнопка-триггер</h2>
+            <p class="text-gray-600 mb-4">Нажмите кнопку ниже, чтобы открыть калькулятор в модальном окне:</p>
+            <div id="mortgage-calculator-trigger"></div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-semibold mb-4">Способ 2: Встраивание в контейнер</h2>
+            <p class="text-gray-600 mb-4">Калькулятор будет встроен прямо здесь:</p>
+            <div id="mortgage-calculator-root"></div>
+        </div>
+    </div>
+
+    <!-- Подключение виджета -->
+    <script src="./dist/widget.iife.js"></script>
+    
+    <!-- Важно: Tailwind CSS должен быть подключен для правильного отображения стилей -->
+    
+    <script>
+        // Проверка загрузки виджета
+        console.log('MortgageCalculatorWidget доступен:', typeof window.MortgageCalculatorWidget !== 'undefined');
+        
+        // Инициализация после загрузки DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.MortgageCalculatorWidget) {
+                // Способ 1: Создание кнопки-триггера
+                window.MortgageCalculatorWidget.createTriggerButton({
+                    containerId: 'mortgage-calculator-trigger',
+                    buttonText: 'Рассчитать ипотеку',
+                    buttonClass: 'inline-flex items-center gap-2 bg-emerald-600 text-white px-8 py-4 rounded-full text-lg font-semibold shadow-lg hover:bg-emerald-700 hover:shadow-xl transition-all transform hover:-translate-y-1'
+                });
+
+                // Способ 2: Встраивание в контейнер (закомментировано, чтобы показать только кнопку)
+                // window.MortgageCalculatorWidget.init({
+                //     containerId: 'mortgage-calculator-root'
+                // });
+            } else {
+                console.error('MortgageCalculatorWidget не загружен!');
+            }
+        });
+    </script>
+</body>
+</html>
+
