@@ -281,6 +281,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     const [tooltipHeight, setTooltipHeight] = useState(480); // Высота тултипа для позиционирования
     const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false); // Подтверждение закрытия
     const [tabToDelete, setTabToDelete] = useState<string | null>(null);
+    const [showDebug, setShowDebug] = useState(false);
     const dateInputRef = useRef<HTMLInputElement>(null);
     const rateButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -965,7 +966,15 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
 
                 {/* Верхние карточки сводки */}
                 <div className="p-4 md:p-6 border-b border-slate-100 bg-slate-50/50 shrink-0">
-                    <h2 className="text-lg md:text-xl font-bold text-slate-800 mb-4">Результаты расчета</h2>
+                    <h2 className="text-lg md:text-xl font-bold text-slate-800 mb-4">
+                        Результаты расчет<span onClick={() => setShowDebug(!showDebug)}>а</span>
+                    </h2>
+
+                    {showDebug && propertyInfoToUse.extraData && (
+                        <div className="mb-4 p-4 bg-slate-800 text-emerald-400 text-xs rounded-xl overflow-auto max-h-64 font-mono shadow-inner">
+                            <pre>{JSON.stringify(propertyInfoToUse.extraData, null, 2)}</pre>
+                        </div>
+                    )}
 
                     {/* Основные ключевые метрики - Адаптивная сетка */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">

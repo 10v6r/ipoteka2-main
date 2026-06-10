@@ -42,6 +42,8 @@ export interface PropertyInfo {
   status?: string; // Статус объекта (сдан, строится и т.д.)
   deliveryDeadline?: string; // Срок сдачи
   description?: string; // Описание ЖК
+  flatId?: string;
+  extraData?: any;
 }
 
 export enum ViewMode {
