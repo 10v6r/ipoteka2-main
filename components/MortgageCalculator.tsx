@@ -170,7 +170,17 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
 
     const addTab = () => {
         const nextId = String(Date.now());
-        const newTabNumber = calculations.length + 1;
+        let maxNumber = 0;
+        calculations.forEach(calc => {
+            const match = calc.name.match(/Расчет (\d+)/);
+            if (match) {
+                const num = parseInt(match[1], 10);
+                if (num > maxNumber) {
+                    maxNumber = num;
+                }
+            }
+        });
+        const newTabNumber = maxNumber > 0 ? maxNumber + 1 : calculations.length + 1;
         const newTab: TabCalculation = {
             id: nextId,
             name: `Расчет ${newTabNumber}`,
