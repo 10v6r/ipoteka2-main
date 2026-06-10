@@ -17,6 +17,15 @@ interface MortgageCalculatorProps {
     propertyInfo?: PropertyInfo;
 }
 
+interface TabCalculation {
+    id: string; // Уникальный идентификатор вкладки
+    name: string; // Имя вкладки (например, "Расчет 1")
+    input: CalculationInput; // Входные параметры
+    mortgageType: 'base' | 'family'; // Тип ипотеки
+    hasSubsidy: boolean; // Есть ли субсидия
+    rateInputValue: string; // Введенное строковое значение ставки
+}
+
 // Функция для парсинга цены из строки (убирает пробелы и преобразует в число)
 const parsePrice = (priceString?: string): number => {
     if (!priceString) return 5000000; // Значение по умолчанию
@@ -32,15 +41,171 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         ? parsePrice(externalPropertyInfo.price)
         : 5000000;
 
-    const [input, setInput] = useState<CalculationInput>({
-        propertyValue: initialPropertyValue,
-        downPayment: Math.round(initialPropertyValue * 0.201), // 20.1% от стоимости по умолчанию
-        interestRate: 12.5,
-        years: 20,
-        startDate: new Date().toISOString().split('T')[0]
+    // Используем externalPropertyInfo, если оно передано, иначе тестовые данные
+    const propertyInfoToUse: PropertyInfo = externalPropertyInfo || {
+        address: "Н.М. Яблокова, 2, кв. 52",
+        area: "54.77 м²",
+        rooms: "2",
+        finish: "Полная отделка",
+        floor: "9 из 15",
+        imageUrl: "https://cdn.pixabay.com/photo/2014/07/10/17/17/bedroom-389254_1280.jpg",
+        managerName: "Иванов Иван Иванович",
+        managerPhone: "+7 (999) 999-99-99",
+        complexName: "ЖК «Северная Долина»",
+        status: "Квартира свободна",
+        deliveryDeadline: "2026 год 3 квартал",
+        apartmentName: "2-к квартира, 54.77 м²",
+        layoutImage: "https://cdn.pixabay.com/photo/2014/07/10/17/17/bedroom-389254_1280.jpg", // Placeholder image
+        description: `<p>Это самый масштабный проект комплексной застройки в Пермском крае. На площади 27 гектаров
+предусмотрено абсолютно всё для комфортного проживания, насыщенного досуга и приятного отдыха
+современной молодой семьи.&nbsp;</p>
+<p>Просторные дворы с затейливыми и при этом безопасными малыми игровыми формами для детей
+разных возрастов. Оборудованные под ключ футбольные и баскетбольные площадки с возможностью
+заливки льдом в зимний период. Грамотная инфраструктурная планировка &mdash; детские сады, школы,
+магазины, аптеки, остановки &mdash; всё в шаговой доступности. &nbsp;</p>
+<p>Жилой массив полностью оправдывает концепцию &laquo;город в городе&raquo;. Здесь каждый оценит
+благотворное влияние мягкой экологии, удобство и комфорт придомовых территорий, душевный уют
+благоприятного социального климата.<br />&nbsp;<br />&laquo;Медовый&raquo; &mdash; территория
+сладкой жизни!</p>`
+    };
+
+    // Генерируем уникальный ключ для localStorage на основе адреса квартиры
+    const storageKey = useMemo(() => {
+        const id = propertyInfoToUse?.address || propertyInfoToUse?.apartmentName || 'default';
+        return `mortgage_calc_tabs_${encodeURIComponent(id)}`;
+    }, [propertyInfoToUse]);
+
+    // Загрузка сохраненных расчетов из localStorage
+    const savedData = useMemo(() => {
+        if (typeof window === 'undefined') return null;
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error("Ошибка парсинга localStorage:", e);
+            }
+        }
+        return null;
+    }, [storageKey]);
+
+    const initialCalculations = useMemo<TabCalculation[]>(() => {
+        if (savedData?.calculations && Array.isArray(savedData.calculations) && savedData.calculations.length > 0) {
+            return savedData.calculations;
+        }
+        return [{
+            id: '1',
+            name: 'Расчет 1',
+            input: {
+                propertyValue: initialPropertyValue,
+                downPayment: Math.round(initialPropertyValue * 0.201),
+                interestRate: 12.5,
+                years: 20,
+                startDate: new Date().toISOString().split('T')[0]
+            },
+            mortgageType: 'base',
+            hasSubsidy: false,
+            rateInputValue: '12.5'
+        }];
+    }, [savedData, initialPropertyValue]);
+
+    const [calculations, setCalculations] = useState<TabCalculation[]>(initialCalculations);
+    
+    const [activeTabId, setActiveTabId] = useState<string>(() => {
+        if (savedData?.activeTabId) {
+            const exists = initialCalculations.some(c => c.id === savedData.activeTabId);
+            if (exists) return savedData.activeTabId;
+        }
+        return initialCalculations[0].id;
     });
 
-    const [mortgageType, setMortgageType] = useState<'base' | 'family'>('base');
+    const activeCalc = useMemo(() => {
+        return calculations.find(c => c.id === activeTabId) || calculations[0];
+    }, [calculations, activeTabId]);
+
+    // Производные переменные состояния для обратной совместимости во всем файле
+    const input = activeCalc.input;
+    const mortgageType = activeCalc.mortgageType;
+    const hasSubsidy = activeCalc.hasSubsidy;
+    const rateInputValue = activeCalc.rateInputValue;
+
+    // Вспомогательная функция обновления активного расчета и синхронизации с localStorage
+    const updateActiveCalc = (fields: Partial<TabCalculation> | ((prev: TabCalculation) => TabCalculation)) => {
+        setCalculations(prev => {
+            const next = prev.map(c => {
+                if (c.id === activeCalc.id) {
+                    return typeof fields === 'function' ? fields(c) : { ...c, ...fields };
+                }
+                return c;
+            });
+            localStorage.setItem(storageKey, JSON.stringify({ calculations: next, activeTabId: activeCalc.id }));
+            return next;
+        });
+    };
+
+    // Обертки над функциями обновления состояния для совместимости с существующим кодом
+    const setInput = (newInput: CalculationInput | ((prev: CalculationInput) => CalculationInput)) => {
+        updateActiveCalc(c => ({
+            ...c,
+            input: typeof newInput === 'function' ? newInput(c.input) : newInput
+        }));
+    };
+
+    const setMortgageType = (newType: 'base' | 'family') => {
+        updateActiveCalc({ mortgageType: newType });
+    };
+
+    const setHasSubsidy = (newVal: boolean) => {
+        updateActiveCalc({ hasSubsidy: newVal });
+    };
+
+    const setRateInputValue = (newVal: string) => {
+        updateActiveCalc({ rateInputValue: newVal });
+    };
+
+    const changeActiveTab = (id: string) => {
+        setActiveTabId(id);
+        localStorage.setItem(storageKey, JSON.stringify({ calculations, activeTabId: id }));
+    };
+
+    const addTab = () => {
+        const nextId = String(Date.now());
+        const newTabNumber = calculations.length + 1;
+        const newTab: TabCalculation = {
+            id: nextId,
+            name: `Расчет ${newTabNumber}`,
+            input: {
+                propertyValue: initialPropertyValue,
+                downPayment: Math.round(initialPropertyValue * 0.201),
+                interestRate: 12.5,
+                years: 20,
+                startDate: new Date().toISOString().split('T')[0]
+            },
+            mortgageType: 'base',
+            hasSubsidy: false,
+            rateInputValue: '12.5'
+        };
+        const nextCalculations = [...calculations, newTab];
+        setCalculations(nextCalculations);
+        setActiveTabId(nextId);
+        localStorage.setItem(storageKey, JSON.stringify({ calculations: nextCalculations, activeTabId: nextId }));
+    };
+
+    const deleteTab = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (calculations.length <= 1) return;
+        
+        const nextCalculations = calculations.filter(c => c.id !== id);
+        let nextActiveId = activeTabId;
+        if (activeTabId === id) {
+            const idx = calculations.findIndex(c => c.id === id);
+            const fallbackIdx = idx === 0 ? 1 : idx - 1;
+            nextActiveId = calculations[fallbackIdx].id;
+        }
+        setCalculations(nextCalculations);
+        setActiveTabId(nextActiveId);
+        localStorage.setItem(storageKey, JSON.stringify({ calculations: nextCalculations, activeTabId: nextActiveId }));
+    };
 
     // Логика для семейной ипотеки: Макс кредит 6 млн
     const maxLoanAmount = mortgageType === 'family' ? 6000000 : Infinity;
@@ -103,11 +268,15 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     const [mobileTab, setMobileTab] = useState<'inputs' | 'results'>('inputs'); // Состояние для мобильных вкладок
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [isRateInfoOpen, setIsRateInfoOpen] = useState(false);
-    const [rateInputValue, setRateInputValue] = useState(String(input.interestRate));
-    const [hasSubsidy, setHasSubsidy] = useState(false); // Состояние для субсидии
     const [tooltipHeight, setTooltipHeight] = useState(480); // Высота тултипа для позиционирования
+    const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false); // Подтверждение закрытия
     const dateInputRef = useRef<HTMLInputElement>(null);
     const rateButtonRef = useRef<HTMLButtonElement>(null);
+
+    const confirmClose = () => {
+        localStorage.removeItem(storageKey);
+        onClose();
+    };
 
     // Закрываем тултип при скролле или изменении размеров, чтобы избежать отрыва от кнопки
     React.useEffect(() => {
@@ -208,33 +377,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         }));
     }, [result.schedule]);
 
-    // Используем externalPropertyInfo, если оно передано, иначе тестовые данные
-    const propertyInfoToUse: PropertyInfo = externalPropertyInfo || {
-        address: "Н.М. Яблокова, 2, кв. 52",
-        area: "54.77 м²",
-        rooms: "2",
-        finish: "Полная отделка",
-        floor: "9 из 15",
-        imageUrl: "https://cdn.pixabay.com/photo/2014/07/10/17/17/bedroom-389254_1280.jpg",
-        managerName: "Иванов Иван Иванович",
-        managerPhone: "+7 (999) 999-99-99",
-        complexName: "ЖК «Северная Долина»",
-        status: "Квартира свободна",
-        deliveryDeadline: "2026 год 3 квартал",
-        apartmentName: "2-к квартира, 54.77 м²",
-        layoutImage: "https://cdn.pixabay.com/photo/2014/07/10/17/17/bedroom-389254_1280.jpg", // Placeholder image
-        description: `<p>Это самый масштабный проект комплексной застройки в Пермском крае. На площади 27 гектаров
-предусмотрено абсолютно всё для комфортного проживания, насыщенного досуга и приятного отдыха
-современной молодой семьи.&nbsp;</p>
-<p>Просторные дворы с затейливыми и при этом безопасными малыми игровыми формами для детей
-разных возрастов. Оборудованные под ключ футбольные и баскетбольные площадки с возможностью
-заливки льдом в зимний период. Грамотная инфраструктурная планировка &mdash; детские сады, школы,
-магазины, аптеки, остановки &mdash; всё в шаговой доступности. &nbsp;</p>
-<p>Жилой массив полностью оправдывает концепцию &laquo;город в городе&raquo;. Здесь каждый оценит
-благотворное влияние мягкой экологии, удобство и комфорт придомовых территорий, душевный уют
-благоприятного социального климата.<br />&nbsp;<br />&laquo;Медовый&raquo; &mdash; территория
-сладкой жизни!</p>`
-    };
+
 
     const handleExportPDF = async () => {
         setIsGeneratingPdf(true);
@@ -334,7 +477,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                 </div>
                 {/* Кнопка закрытия */}
                 <button
-                    onClick={onClose}
+                    onClick={() => setIsConfirmCloseOpen(true)}
                     className="p-2.5 bg-slate-200/60 active:bg-slate-300 rounded-xl text-slate-600 transition-colors"
                 >
                     <X size={20} />
@@ -349,6 +492,47 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                 <h2 className="hidden lg:block text-xl font-bold text-slate-800 mb-6">Параметры</h2>
 
                 <div className="space-y-6">
+                    {/* Вкладки расчетов */}
+                    <div className="flex items-center gap-2 border-b border-slate-200 pb-3 -mt-2 mb-2 overflow-x-auto select-none no-scrollbar">
+                        <div className="flex gap-1.5 items-center">
+                            {calculations.map((calc) => {
+                                const isActive = calc.id === activeTabId;
+                                return (
+                                    <div
+                                        key={calc.id}
+                                        onClick={() => changeActiveTab(calc.id)}
+                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                                            isActive
+                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
+                                                : 'bg-white text-slate-500 border-slate-200 hover:text-slate-700 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <span>{calc.name}</span>
+                                        {calculations.length > 1 && (
+                                            <button
+                                                onClick={(e) => deleteTab(calc.id, e)}
+                                                className={`p-0.5 rounded-full hover:bg-slate-200 transition-colors ${
+                                                    isActive ? 'text-emerald-600 hover:bg-emerald-100' : 'text-slate-400 hover:text-slate-600'
+                                                }`}
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <button
+                            onClick={addTab}
+                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors border border-slate-200 shrink-0"
+                            title="Добавить новый расчет"
+                        >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                        </button>
+                    </div>
+
                     {/* Переключатель типа ипотеки */}
                     <div className="flex bg-slate-200 p-1 rounded-xl mb-4">
                         <button
@@ -729,7 +913,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
       `}>
                 {/* Кнопка закрытия только для десктопа */}
                 <button
-                    onClick={onClose}
+                    onClick={() => setIsConfirmCloseOpen(true)}
                     className="hidden lg:block absolute top-4 right-4 z-20 p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
                 >
                     <X size={24} />
@@ -1156,6 +1340,147 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                     )}
                 </div>
             </div>
+            {/* Модальное окно подтверждения закрытия */}
+            {isConfirmCloseOpen && (
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[10000] select-none">
+                    <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center animate-fade-in-up">
+                        {/* Декоративная иллюстрация с папкой и улетающими вкладками расчетов */}
+                        <div className="relative w-48 h-36 mb-4 flex items-center justify-center">
+                            
+                            <svg className="w-full h-full relative z-10" viewBox="0 -10 180 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <style dangerouslySetInnerHTML={{ __html: `
+                                    @keyframes levitate {
+                                        0% { transform: translateY(0px); }
+                                        50% { transform: translateY(-6px); }
+                                        100% { transform: translateY(0px); }
+                                    }
+                                    @keyframes float-symbol-1 {
+                                        0% { transform: translateY(0px) rotate(0deg); opacity: 0.5; }
+                                        50% { transform: translateY(-10px) rotate(15deg); opacity: 1; }
+                                        100% { transform: translateY(0px) rotate(0deg); opacity: 0.5; }
+                                    }
+                                    @keyframes float-symbol-2 {
+                                        0% { transform: translateY(0px) rotate(0deg); opacity: 0.5; }
+                                        50% { transform: translateY(-8px) rotate(-15deg); opacity: 1; }
+                                        100% { transform: translateY(0px) rotate(0deg); opacity: 0.5; }
+                                    }
+                                    .calc-float { animation: levitate 5s ease-in-out infinite; transform-origin: center; }
+                                    .symbol-1 { animation: float-symbol-1 4s ease-in-out infinite; }
+                                    .symbol-2 { animation: float-symbol-2 5s ease-in-out infinite; }
+                                ` }} />
+                                <defs>
+                                    <radialGradient id="bgGlowRose" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stopColor="#ffe4e6" stopOpacity="0.8" />
+                                        <stop offset="100%" stopColor="#ffe4e6" stopOpacity="0" />
+                                    </radialGradient>
+                                    <radialGradient id="bgGlowEmerald" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stopColor="#ecfdf5" stopOpacity="0.8" />
+                                        <stop offset="100%" stopColor="#ecfdf5" stopOpacity="0" />
+                                    </radialGradient>
+                                    
+                                    <linearGradient id="calcBodyGrad" x1="50" y1="20" x2="130" y2="120" gradientUnits="userSpaceOnUse">
+                                        <stop offset="0%" stopColor="#ffffff" />
+                                        <stop offset="100%" stopColor="#f1f5f9" />
+                                    </linearGradient>
+                                    <linearGradient id="calcBorderGrad" x1="50" y1="20" x2="130" y2="120" gradientUnits="userSpaceOnUse">
+                                        <stop offset="0%" stopColor="#cbd5e1" stopOpacity="0.6" />
+                                        <stop offset="100%" stopColor="#e2e8f0" stopOpacity="1" />
+                                    </linearGradient>
+                                    <linearGradient id="calcDisplayGrad" x1="60" y1="30" x2="120" y2="50" gradientUnits="userSpaceOnUse">
+                                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.1" />
+                                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.25" />
+                                    </linearGradient>
+                                    <linearGradient id="accentBtnGrad" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stopColor="#f43f5e" />
+                                        <stop offset="100%" stopColor="#e11d48" />
+                                    </linearGradient>
+                                    <linearGradient id="equalBtnGrad" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stopColor="#10b981" />
+                                        <stop offset="100%" stopColor="#059669" />
+                                    </linearGradient>
+                                    <filter id="calcShadow" x="-50%" y="-50%" width="200%" height="200%">
+                                        <feDropShadow dx="0" dy="12" stdDeviation="10" floodColor="#0f172a" floodOpacity="0.15" />
+                                    </filter>
+                                    <filter id="symbolShadow" x="-50%" y="-50%" width="200%" height="200%">
+                                        <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#10b981" floodOpacity="0.2" />
+                                    </filter>
+                                </defs>
+
+                                {/* Фоновое свечение */}
+                                <circle cx="90" cy="70" r="50" fill="url(#bgGlowEmerald)" />
+                                <circle cx="120" cy="40" r="40" fill="url(#bgGlowRose)" />
+
+                                {/* Плавающие математические символы */}
+                                <g className="symbol-1" style={{ transformOrigin: '35px 45px' }} filter="url(#symbolShadow)">
+                                    <rect x="25" y="35" width="20" height="20" rx="6" fill="#ffffff" stroke="#f43f5e" strokeWidth="1.5" />
+                                    <path d="M30 45 L40 45 M35 40 L35 50" stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" />
+                                </g>
+                                <g className="symbol-2" style={{ transformOrigin: '145px 85px' }} filter="url(#symbolShadow)">
+                                    <rect x="135" y="75" width="20" height="20" rx="6" fill="#ffffff" stroke="#10b981" strokeWidth="1.5" />
+                                    <path d="M140 83 L150 83 M140 87 L150 87" stroke="#10b981" strokeWidth="2" strokeLinecap="round" />
+                                </g>
+                                <g className="symbol-1" style={{ transformOrigin: '140px 30px' }} filter="url(#symbolShadow)">
+                                    <rect x="130" y="20" width="20" height="20" rx="6" fill="#ffffff" stroke="#f59e0b" strokeWidth="1.5" />
+                                    <path d="M136 26 L144 34 M144 26 L136 34" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" />
+                                </g>
+                                <g className="symbol-2" style={{ transformOrigin: '30px 90px' }} filter="url(#symbolShadow)">
+                                    <circle cx="35" cy="85" r="12" fill="#ffffff" stroke="#6366f1" strokeWidth="1.5" />
+                                    <path d="M31 85 L39 85" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" />
+                                </g>
+
+                                {/* Основной калькулятор */}
+                                <g className="calc-float" filter="url(#calcShadow)">
+                                    <rect x="55" y="15" width="70" height="110" rx="14" fill="url(#calcBodyGrad)" stroke="url(#calcBorderGrad)" strokeWidth="1.5" />
+                                    
+                                    {/* Дисплей */}
+                                    <rect x="65" y="25" width="50" height="22" rx="6" fill="url(#calcDisplayGrad)" stroke="#10b981" strokeOpacity="0.2" strokeWidth="1" />
+                                    <path d="M 105 38 L 105 38.1" stroke="#059669" strokeWidth="3" strokeLinecap="round" />
+                                    <path d="M 98 38 L 98 38.1" stroke="#059669" strokeWidth="3" strokeLinecap="round" />
+                                    <path d="M 91 38 L 91 38.1" stroke="#059669" strokeWidth="3" strokeLinecap="round" />
+                                    <path d="M 75 38 L 82 38" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.5" />
+                                    
+                                    {/* Кнопки */}
+                                    <rect x="65" y="55" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+                                    <rect x="84" y="55" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+                                    <rect x="103" y="55" width="12" height="12" rx="4" fill="url(#accentBtnGrad)" />
+                                    
+                                    <rect x="65" y="73" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+                                    <rect x="84" y="73" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+                                    <rect x="103" y="73" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+                                    
+                                    <rect x="65" y="91" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+                                    <rect x="84" y="91" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+                                    <rect x="103" y="91" width="12" height="28" rx="4" fill="url(#equalBtnGrad)" />
+
+                                    <rect x="65" y="109" width="31" height="10" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
+                                </g>
+                            </svg>
+                        </div>
+
+                        <h3 className="text-xl font-extrabold text-slate-800 mb-2">Очистить расчеты?</h3>
+                        <p className="text-sm text-slate-500 leading-relaxed mb-6 px-2">
+                            После закрытия калькулятора все ваши расчеты очистятся. При необходимости скачайте их в PDF перед закрытием.
+                        </p>
+
+                        <div className="w-full">
+                            <div className="flex gap-3 w-full">
+                                <button
+                                    onClick={() => setIsConfirmCloseOpen(false)}
+                                    className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition-colors"
+                                >
+                                    Вернуться
+                                </button>
+                                <button
+                                    onClick={confirmClose}
+                                    className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm shadow-lg shadow-rose-200/50 active:scale-95 transition-all"
+                                >
+                                    Закрыть калькулятор
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
