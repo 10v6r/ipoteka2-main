@@ -270,6 +270,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     const [isRateInfoOpen, setIsRateInfoOpen] = useState(false);
     const [tooltipHeight, setTooltipHeight] = useState(480); // Высота тултипа для позиционирования
     const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false); // Подтверждение закрытия
+    const [tabToDelete, setTabToDelete] = useState<string | null>(null);
     const dateInputRef = useRef<HTMLInputElement>(null);
     const rateButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -500,23 +501,51 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                 return (
                                     <div
                                         key={calc.id}
-                                        onClick={() => changeActiveTab(calc.id)}
-                                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
-                                            isActive
-                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
-                                                : 'bg-white text-slate-500 border-slate-200 hover:text-slate-700 hover:bg-slate-50'
+                                        onClick={() => {
+                                            if (tabToDelete !== calc.id) changeActiveTab(calc.id);
+                                        }}
+                                        className={`flex items-center gap-1 pl-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                                            calculations.length > 1 ? 'pr-1.5' : 'pr-3'
+                                        } ${
+                                            tabToDelete === calc.id
+                                                ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
+                                                : isActive
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
+                                                    : 'bg-white text-slate-500 border-slate-200 hover:text-slate-700 hover:bg-slate-50'
                                         }`}
                                     >
-                                        <span>{calc.name}</span>
-                                        {calculations.length > 1 && (
-                                            <button
-                                                onClick={(e) => deleteTab(calc.id, e)}
-                                                className={`p-0.5 rounded-full hover:bg-slate-200 transition-colors ${
-                                                    isActive ? 'text-emerald-600 hover:bg-emerald-100' : 'text-slate-400 hover:text-slate-600'
-                                                }`}
-                                            >
-                                                <X size={12} />
-                                            </button>
+                                        {tabToDelete === calc.id ? (
+                                            <>
+                                                <span className="pl-1">Удалить?</span>
+                                                <div className="flex gap-1 ml-1">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); deleteTab(calc.id, e); setTabToDelete(null); }}
+                                                        className="px-2 py-1 bg-rose-200 hover:bg-rose-300 text-rose-800 rounded text-[10px] uppercase tracking-wide transition-colors"
+                                                    >
+                                                        Да
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setTabToDelete(null); }}
+                                                        className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] uppercase tracking-wide transition-colors"
+                                                    >
+                                                        Нет
+                                                    </button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>{calc.name}</span>
+                                                {calculations.length > 1 && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setTabToDelete(calc.id); }}
+                                                        className={`p-1 rounded-md transition-colors ${
+                                                            isActive ? 'text-emerald-600 hover:bg-emerald-200/50 hover:text-emerald-800' : 'text-slate-400 hover:bg-slate-200 hover:text-slate-700'
+                                                        }`}
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 );
@@ -550,7 +579,12 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                     </div>
 
                     <InputGroup
-                        label="Стоимость недвижимости"
+                        label={
+                            <span className="flex items-center gap-2">
+                                <Building2 size={16} className="text-slate-400" />
+                                Стоимость недвижимости
+                            </span>
+                        }
                         value={input.propertyValue}
                         onChange={handlePropertyValueChange}
                         min={500000}

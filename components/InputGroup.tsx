@@ -7,7 +7,7 @@ export interface Preset {
 }
 
 interface InputGroupProps {
-  label: string;
+  label: React.ReactNode;
   value: number;
   onChange: (val: number) => void;
   min?: number;
@@ -114,7 +114,7 @@ export const InputGroup: React.FC<InputGroupProps> = ({
           onChange={handleInputChange}
           onBlur={onBlur}
           readOnly={readOnly}
-          className={`w-full pl-4 py-3 border rounded-xl outline-none transition-all font-bold shadow-sm ${readOnly
+          className={`w-full h-[46px] pl-4 border rounded-xl outline-none transition-all font-bold shadow-sm ${readOnly
             ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed'
             : `bg-white text-slate-900 ${error ? 'border-rose-500 focus:border-rose-500 focus:ring-2 focus:ring-rose-200' : 'border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 hover:border-slate-300'}`
             } ${suffix || secondaryLabel ? 'pr-24' : 'pr-4'}`}
