@@ -101,7 +101,7 @@ const App: React.FC<{ propertyInfo?: PropertyInfo }> = ({ propertyInfo }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4">
           <div 
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
-            onClick={() => setIsOpen(false)}
+            onClick={() => document.dispatchEvent(new CustomEvent('request-mortgage-close'))}
           />
           <div className="relative w-full h-full z-10 animate-fade-in-up">
             <MortgageCalculator 
@@ -120,7 +120,7 @@ const ModalApp: React.FC<{ propertyInfo?: PropertyInfo; onClose: () => void }> =
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4">
       <div 
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
+        onClick={() => document.dispatchEvent(new CustomEvent('request-mortgage-close'))}
       />
       <div className="relative w-full h-full z-10 animate-fade-in-up">
         <MortgageCalculator onClose={onClose} propertyInfo={propertyInfo} />

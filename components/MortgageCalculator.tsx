@@ -290,6 +290,12 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         onClose();
     };
 
+    React.useEffect(() => {
+        const handleRequestClose = () => setIsConfirmCloseOpen(true);
+        document.addEventListener('request-mortgage-close', handleRequestClose);
+        return () => document.removeEventListener('request-mortgage-close', handleRequestClose);
+    }, []);
+
     // Закрываем тултип при скролле или изменении размеров, чтобы избежать отрыва от кнопки
     React.useEffect(() => {
         if (!isRateInfoOpen) return;
