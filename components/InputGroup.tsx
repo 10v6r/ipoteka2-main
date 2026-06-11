@@ -21,6 +21,7 @@ interface InputGroupProps {
   onBlur?: () => void;
   readOnly?: boolean;
   allowDecimals?: boolean;
+  discountedValue?: number;
 }
 
 export const InputGroup: React.FC<InputGroupProps> = ({
@@ -37,7 +38,8 @@ export const InputGroup: React.FC<InputGroupProps> = ({
   error,
   onBlur,
   readOnly = false,
-  allowDecimals = false
+  allowDecimals = false,
+  discountedValue
 }) => {
 
   const formatNumber = (num: number): string => {
@@ -117,9 +119,16 @@ export const InputGroup: React.FC<InputGroupProps> = ({
           className={`w-full h-[46px] pl-4 border rounded-xl outline-none transition-all font-bold shadow-sm ${readOnly
             ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed'
             : `bg-white text-slate-900 ${error ? 'border-rose-500 focus:border-rose-500 focus:ring-2 focus:ring-rose-200' : 'border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 hover:border-slate-300'}`
-            } ${suffix || secondaryLabel ? 'pr-24' : 'pr-4'}`}
+            } ${suffix || secondaryLabel ? 'pr-24' : 'pr-4'} ${discountedValue !== undefined && discountedValue < value ? '!text-transparent select-none' : ''}`}
         // min/max attributes don't work the same on type="text", validation should be handled in onChange or parent if strict
         />
+
+        {discountedValue !== undefined && discountedValue < value && (
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+            <span className="line-through text-slate-400 font-semibold">{formatNumber(value)}</span>
+            <span className="text-emerald-600 font-bold">{formatNumber(discountedValue)}</span>
+          </div>
+        )}
 
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
           {secondaryLabel && (

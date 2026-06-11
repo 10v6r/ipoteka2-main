@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { calculateMortgage, formatCurrency, formatDate } from '../utils/calculations';
 import { generateMortgagePDF } from '../utils/pdfGenerator';
@@ -10,7 +10,7 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid,
     BarChart, Bar
 } from 'recharts';
-import { Download, Table, PieChart as PieIcon, X, Calendar, HelpCircle, Loader2, ChevronRight, LayoutDashboard, Settings2, Building2, Wallet, CalendarDays, Percent, Info } from 'lucide-react';
+import { Download, Table, PieChart as PieIcon, X, Calendar, HelpCircle, Loader2, ChevronRight, LayoutDashboard, Settings2, Building2, Wallet, CalendarDays, Percent, Info, PartyPopper } from 'lucide-react';
 
 interface MortgageCalculatorProps {
     onClose: () => void;
@@ -33,6 +33,44 @@ const parsePrice = (priceString?: string): number => {
     const cleaned = priceString.replace(/\s+/g, '');
     const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? 5000000 : parsed;
+};
+
+type OfferTermRule = {
+    program?: 'base' | 'family';
+    exactDownPayment?: number;
+    minDownPayment?: number;
+    subsidy?: boolean;
+};
+
+const OFFER_TERM_RULES: Record<string, OfferTermRule> = {
+    // Базовая ставка (ПВЗ без субсидии)
+    "76a26a63-4eb0-11f1-8278-ac1f6bd9ba5d": { program: 'base', exactDownPayment: 0, subsidy: false },
+    // Базовая ставка (ПВЗ с субсидией)
+    "9c14a052-4eb0-11f1-8278-ac1f6bd9ba5d": { program: 'base', exactDownPayment: 0, subsidy: true },
+    // Базовая ставка (Свой ПВ без субсидии)
+    "69b35f2a-4eb0-11f1-8278-ac1f6bd9ba5d": { program: 'base', minDownPayment: 20.1, subsidy: false },
+    // Базовая ставка (Свой ПВ с субсидией)
+    "82d0cbec-4eb0-11f1-8278-ac1f6bd9ba5d": { program: 'base', minDownPayment: 20.1, subsidy: true },
+    // Базовая ставка (ЧПВЗ без субсидии)
+    "6fdd2010-4eb0-11f1-8278-ac1f6bd9ba5d": { program: 'base', exactDownPayment: 10.5, subsidy: false },
+    // Базовая ставка (ЧПВЗ с субсидией)
+    "8ee78bf8-4eb0-11f1-8278-ac1f6bd9ba5d": { program: 'base', exactDownPayment: 10.5, subsidy: true },
+    
+    // Полная оплата - минимальная цена
+    "3850ff27-4ea9-11f1-8278-ac1f6bd9ba5d": { exactDownPayment: 100 },
+
+    // Семейная ипотека (ПВЗ без субсидии)
+    "d687b5df-4eaf-11f1-8278-ac1f6bd9ba5d": { program: 'family', exactDownPayment: 0, subsidy: false },
+    // Семейная ипотека (ПВЗ с субсидией)
+    "3d04aeba-4eb0-11f1-8278-ac1f6bd9ba5d": { program: 'family', exactDownPayment: 0, subsidy: true },
+    // Семейная ипотека (Свой ПВ без субсидии)
+    "d080f77c-4eaf-11f1-8278-ac1f6bd9ba5d": { program: 'family', minDownPayment: 20.1, subsidy: false },
+    // Семейная ипотека (Свой ПВ с субсидией)
+    "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d": { program: 'family', minDownPayment: 20.1, subsidy: true },
+    // Семейная ипотека (ЧПВЗ без субсидии)
+    "d687b5cc-4eaf-11f1-8278-ac1f6bd9ba5d": { program: 'family', exactDownPayment: 10.5, subsidy: false },
+    // Семейная ипотека (ЧПВЗ с субсидией)
+    "2d8fbede-4eb0-11f1-8278-ac1f6bd9ba5d": { program: 'family', exactDownPayment: 10.5, subsidy: true },
 };
 
 export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose, propertyInfo: externalPropertyInfo }) => {
@@ -265,14 +303,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         setInput({ ...input, downPayment: newDownPayment });
     };
 
-    const handleDownPaymentBlur = () => {
-        if (mortgageType === 'family') {
-            const minDown = Math.max(0, input.propertyValue - 6000000);
-            if (input.downPayment < minDown) {
-                setInput({ ...input, downPayment: minDown });
-            }
-        }
-    };
+
 
     const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Object);
     const [mobileTab, setMobileTab] = useState<'inputs' | 'results'>('inputs'); // Состояние для мобильных вкладок
@@ -342,8 +373,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         };
     }, [isRateInfoOpen]);
 
-    const result = useMemo(() => calculateMortgage(input), [input]);
-
+    // result is moved down
     const apiOffers = useMemo(() => {
         const offers: Array<{
             rate: string;
@@ -362,35 +392,41 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
             propertyInfoToUse.extraData.forEach((group: any) => {
                 if (group.items && Array.isArray(group.items)) {
                     group.items.forEach((item: any) => {
-                        if (item.rates && Array.isArray(item.rates)) {
-                            item.rates.forEach((rateObj: any) => {
-                                const baseOffer = {
-                                    rate: rateObj.rate + '%',
-                                    comment: rateObj.comment || '',
-                                    bankName: item.bank?.name || '',
-                                    price: item.price,
-                                    offerprice: item.offerprice,
-                                    frommonths: rateObj.frommonths,
-                                    tomonths: rateObj.tomonths,
-                                    subsidy: item.subsidy,
-                                };
+                        const processOffer = (rateObj?: any) => {
+                            const baseOffer = {
+                                rate: rateObj ? rateObj.rate + '%' : '0%',
+                                comment: rateObj?.comment || '',
+                                bankName: item.bank?.name || '',
+                                price: item.price,
+                                offerprice: item.offerprice,
+                                frommonths: rateObj?.frommonths,
+                                tomonths: rateObj?.tomonths,
+                                subsidy: item.subsidy,
+                            };
 
-                                if (item.offerterms && Array.isArray(item.offerterms) && item.offerterms.length > 0) {
-                                    item.offerterms.forEach((term: any) => {
-                                        offers.push({
-                                            ...baseOffer,
-                                            offertermUid: term.uid,
-                                            offertermName: term.name,
-                                        });
-                                    });
-                                } else {
+                            if (item.offerterms && Array.isArray(item.offerterms) && item.offerterms.length > 0) {
+                                item.offerterms.forEach((term: any) => {
                                     offers.push({
                                         ...baseOffer,
-                                        offertermUid: undefined,
-                                        offertermName: undefined,
+                                        offertermUid: term.uid,
+                                        offertermName: term.name,
                                     });
-                                }
+                                });
+                            } else {
+                                offers.push({
+                                    ...baseOffer,
+                                    offertermUid: undefined,
+                                    offertermName: undefined,
+                                });
+                            }
+                        };
+
+                        if (item.rates && Array.isArray(item.rates) && item.rates.length > 0) {
+                            item.rates.forEach((rateObj: any) => {
+                                processOffer(rateObj);
                             });
+                        } else {
+                            processOffer();
                         }
                     });
                 }
@@ -401,11 +437,44 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
             const currentMonths = input.years * 12;
             
             finalOffers = offers.filter(o => {
-                const subsidyMatch = hasSubsidy ? o.subsidy === true : !o.subsidy;
                 const fromMonthsMatch = typeof o.frommonths === 'number' ? currentMonths >= o.frommonths : true;
                 const toMonthsMatch = typeof o.tomonths === 'number' ? currentMonths <= o.tomonths : true;
+                if (!fromMonthsMatch || !toMonthsMatch) return false;
+
+                const currentDownpayment = input.propertyValue > 0 ? (input.downPayment / input.propertyValue) * 100 : 0;
+
+                if (o.offertermUid && OFFER_TERM_RULES[o.offertermUid]) {
+                    const rule = OFFER_TERM_RULES[o.offertermUid];
+                    
+                    if (Math.abs(currentDownpayment - 100) <= 0.1) {
+                        // Если ПВ 100%, применяем только условие полной оплаты (игнорируя программу и субсидию)
+                        return rule.exactDownPayment === 100;
+                    }
+                    
+                    if (rule.program && rule.program !== mortgageType) return false;
+                    
+                    if (rule.subsidy !== undefined) {
+                        const ruleSubsidyMatchesCheckbox = hasSubsidy ? rule.subsidy === true : rule.subsidy === false;
+                        if (!ruleSubsidyMatchesCheckbox) return false;
+                    }
+                    
+                    if (rule.exactDownPayment !== undefined) {
+                        if (Math.abs(currentDownpayment - rule.exactDownPayment) > 0.1) return false;
+                    }
+                    if (rule.minDownPayment !== undefined) {
+                        if (currentDownpayment < rule.minDownPayment - 0.1) return false;
+                    }
+                    
+                    return true;
+                }
                 
-                return subsidyMatch && fromMonthsMatch && toMonthsMatch;
+                if (Math.abs(currentDownpayment - 100) <= 0.1) {
+                    // Если ПВ 100%, обычные (fallback) предложения не показываем, только "Полную оплату"
+                    return false;
+                }
+
+                const subsidyMatch = hasSubsidy ? o.subsidy === true : !o.subsidy;
+                return subsidyMatch;
             });
         }
 
@@ -415,14 +484,67 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
             ];
         }
 
-        return finalOffers;
-    }, [propertyInfoToUse?.extraData, hasSubsidy, input.years]);
+        return finalOffers.sort((a, b) => parseFloat(b.rate) - parseFloat(a.rate));
+    }, [propertyInfoToUse?.extraData, hasSubsidy, input.years, mortgageType, input.downPayment, input.propertyValue]);
+
+    // Находим минимальную цену из текущих предложений
+    const minOfferPrice = useMemo(() => {
+        if (!apiOffers || apiOffers.length === 0) return undefined;
+        let min: number | undefined = undefined;
+        for (const offer of apiOffers) {
+            if (offer.offerprice !== undefined) {
+                if (min === undefined || offer.offerprice < min) {
+                    min = offer.offerprice;
+                }
+            }
+        }
+        return min;
+    }, [apiOffers]);
 
     // Расчет процента первоначального взноса
     const downPaymentPercentage = useMemo(() => {
         if (input.propertyValue === 0) return 0;
         return (input.downPayment / input.propertyValue) * 100;
     }, [input.downPayment, input.propertyValue]);
+
+    const effectivePrice = useMemo(() => {
+        return (minOfferPrice !== undefined && minOfferPrice < input.propertyValue) 
+            ? minOfferPrice 
+            : input.propertyValue;
+    }, [minOfferPrice, input.propertyValue]);
+
+    const [priceAlert, setPriceAlert] = useState(false);
+    const prevPriceRef = useRef<number | undefined>(undefined);
+
+    useEffect(() => {
+        if (prevPriceRef.current !== undefined && prevPriceRef.current !== effectivePrice) {
+            setPriceAlert(true);
+            const timer = setTimeout(() => setPriceAlert(false), 2500);
+            prevPriceRef.current = effectivePrice;
+            return () => clearTimeout(timer);
+        }
+        prevPriceRef.current = effectivePrice;
+    }, [effectivePrice]);
+
+    const handleDownPaymentBlur = () => {
+        if (mortgageType === 'family') {
+            const minDown = Math.max(0, effectivePrice - 6000000);
+            if (input.downPayment < minDown) {
+                setInput({ ...input, downPayment: minDown });
+            }
+        }
+    };
+
+    const result = useMemo(() => {
+        // Пересчитываем первоначальный взнос, чтобы сохранить процент (ПВ) от новой сниженной стоимости
+        const effectiveDownPayment = (effectivePrice * downPaymentPercentage) / 100;
+
+        return calculateMortgage({
+            ...input,
+            propertyValue: effectivePrice,
+            downPayment: effectiveDownPayment
+        });
+    }, [input, effectivePrice, downPaymentPercentage]);
 
     const chartData = [
         { name: 'Основной долг', value: result.loanAmount, color: '#10b981' }, // изумрудный-500
@@ -571,6 +693,14 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
 
     return (
         <div className="bg-white w-full h-full flex flex-col lg:flex-row overflow-hidden lg:rounded-2xl shadow-2xl relative">
+            
+            {/* Тост с уведомлением об изменении цены */}
+            <div className={`absolute top-4 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-lg z-50 transition-all duration-500 ease-out flex items-center gap-2 ${
+                priceAlert ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-95 pointer-events-none'
+            }`}>
+                <Info size={18} className="text-emerald-100" />
+                Стоимость изменилась
+            </div>
 
             {/* Мобильный/Планшетный заголовок / Вкладки навигации */}
             {/* Видимо на мобильных и планшетах (< 1024px) */}
@@ -699,6 +829,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                             </span>
                         }
                         value={input.propertyValue}
+                        discountedValue={minOfferPrice}
                         onChange={handlePropertyValueChange}
                         min={500000}
                         max={100000000}
@@ -733,7 +864,10 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                 </svg>
                             </div>
                         </div>
-                        <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors">Есть субсидия</span>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-medium text-slate-700 group-hover:text-slate-900 transition-colors">Есть субсидия</span>
+                            <span className="text-[11px] text-slate-400 font-medium mt-0.5 leading-tight">Позаботились и снизили ставку для вас</span>
+                        </div>
                     </label>
 
                     {/* Первоначальный взнос — слайдер */}
@@ -788,9 +922,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                             v = marks.reduce((prev, curr) => Math.abs(curr - v) < Math.abs(prev - v) ? curr : prev);
                                         }
                                         const newDownPayment = Math.round(input.propertyValue * (v / 100));
-                                        // Ограничение: кредит не может быть меньше 100 000 ₽
-                                        const maxDown = input.propertyValue - 100000;
-                                        handleDownPaymentChange(Math.min(newDownPayment, maxDown));
+                                        handleDownPaymentChange(newDownPayment);
                                     }}
                                     onMouseUp={handleDownPaymentBlur}
                                     onTouchEnd={handleDownPaymentBlur}
@@ -915,7 +1047,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                         }
                                                     }
                                                 }}
-                                                className="absolute w-96 transition-all duration-200 rate-tooltip-container"
+                                                className="absolute w-[420px] transition-all duration-200 rate-tooltip-container"
                                                 style={{
                                                     left: rect.right + 16,
                                                     top: tooltipTop,
@@ -1120,8 +1252,38 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                     <X size={24} />
                 </button>
 
-                {/* Верхние карточки сводки */}
-                <div className="p-4 md:p-6 border-b border-slate-100 bg-slate-50/50 shrink-0">
+                {Math.abs(downPaymentPercentage - 100) <= 0.1 ? (
+                    <div className="flex flex-col items-center justify-center h-full p-6 md:p-12 text-center animate-in fade-in zoom-in duration-500 bg-slate-50/30">
+                        <div className="w-32 h-32 mb-8 rounded-full bg-emerald-100 flex items-center justify-center shadow-inner relative overflow-hidden">
+                            <div className="absolute inset-0 bg-emerald-500/20 animate-pulse"></div>
+                            <PartyPopper size={64} className="text-emerald-600 relative z-10 animate-bounce" />
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-extrabold text-slate-800 mb-4 tracking-tight uppercase">
+                            Полная оплата
+                        </h2>
+                        <div className="text-emerald-600 font-bold text-5xl md:text-6xl mb-6 drop-shadow-md">
+                            {formatCurrency(effectivePrice)}
+                        </div>
+                        <p className="text-slate-500 max-w-md text-base md:text-lg font-medium leading-relaxed">
+                            Вы выбрали 100% первоначальный взнос. Ипотека не требуется, вы приобретаете недвижимость за полную стоимость.
+                        </p>
+                        
+                        {/* Мобильная кнопка PDF */}
+                        <div className="lg:hidden mt-10 w-full max-w-xs">
+                            <button
+                                onClick={handleExportPDF}
+                                disabled={isGeneratingPdf}
+                                className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium shadow-sm transition-colors ${isGeneratingPdf ? 'bg-slate-400 cursor-not-allowed text-slate-100' : 'bg-slate-800 text-white hover:bg-slate-700'}`}
+                            >
+                                {isGeneratingPdf ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                                {isGeneratingPdf ? 'Генерация...' : 'Скачать PDF'}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        {/* Верхние карточки сводки */}
+                        <div className="p-4 md:p-6 border-b border-slate-100 bg-slate-50/50 shrink-0">
                     <h2 className="text-lg md:text-xl font-bold text-slate-800 mb-4">
                         Результаты расчета
                     </h2>
@@ -1548,6 +1710,8 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                         </>
                     )}
                 </div>
+                </>
+                )}
             </div>
             {/* Модальное окно подтверждения закрытия */}
             {isConfirmCloseOpen && (
