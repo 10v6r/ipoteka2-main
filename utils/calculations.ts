@@ -86,12 +86,12 @@ export const calculateMortgage = (input: CalculationInput): CalculationResult =>
   };
 };
 
-export const formatCurrency = (val: number) => {
+export const formatCurrency = (val: number, hideDecimals = false) => {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
     currency: 'RUB',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2, 
+    minimumFractionDigits: hideDecimals ? 0 : 2,
+    maximumFractionDigits: hideDecimals ? 0 : 2, 
   }).format(val);
 };
 

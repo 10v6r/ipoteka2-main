@@ -939,14 +939,27 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                         {apiOffers.map((item, idx) => (
                                                             <div
                                                                 key={idx}
-                                                                className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${item.rate === input.interestRate + '%'
+                                                                onClick={() => {
+                                                                    const val = parseFloat(item.rate);
+                                                                    if (!isNaN(val)) {
+                                                                        setInput(prev => ({ ...prev, interestRate: val }));
+                                                                        setRateInputValue(String(val));
+                                                                        setIsRateInfoOpen(false);
+                                                                    }
+                                                                }}
+                                                                className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer select-none [&_*]:cursor-pointer ${item.rate === input.interestRate + '%'
                                                                     ? 'bg-emerald-50 border-emerald-200'
                                                                     : 'bg-slate-50/50 border-slate-100 hover:bg-slate-50 hover:border-slate-200'
                                                                     }`}
                                                             >
-                                                                <div className="w-[4.5rem] shrink-0 text-left">
+                                                                <div className="w-fit min-w-[4.5rem] pr-2 shrink-0 text-left">
                                                                     <span className={`text-lg font-bold whitespace-nowrap ${item.rate === input.interestRate + '%' ? 'text-emerald-700' : 'text-slate-800'
                                                                         }`}>{item.rate}</span>
+                                                                    {item.offerprice !== undefined && (
+                                                                        <span className="block text-[10px] text-slate-500 mt-0.5 whitespace-nowrap font-medium">
+                                                                            {formatCurrency(item.offerprice, true)}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                                 <div className="flex flex-col gap-0.5 pt-0.5">
                                                                     {item.bankName && <span className="text-xs font-bold text-slate-700">{item.bankName}</span>}
@@ -1011,14 +1024,27 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                     {apiOffers.map((item, idx) => (
                                         <div
                                             key={idx}
-                                            className={`flex items-start gap-3 p-3.5 rounded-2xl border transition-colors cursor-pointer ${item.rate === input.interestRate + '%'
+                                            onClick={() => {
+                                                const val = parseFloat(item.rate);
+                                                if (!isNaN(val)) {
+                                                    setInput(prev => ({ ...prev, interestRate: val }));
+                                                    setRateInputValue(String(val));
+                                                    setIsRateInfoOpen(false);
+                                                }
+                                            }}
+                                            className={`flex items-start gap-3 p-3.5 rounded-2xl border transition-colors cursor-pointer select-none [&_*]:cursor-pointer ${item.rate === input.interestRate + '%'
                                                 ? 'bg-emerald-50 border-emerald-200'
                                                 : 'bg-slate-50/50 border-slate-100 hover:bg-slate-50 hover:border-slate-200'
                                                 }`}
                                         >
-                                            <div className="w-[5rem] shrink-0 text-left">
+                                            <div className="w-fit min-w-[5rem] pr-2 shrink-0 text-left">
                                                 <span className={`text-xl font-bold whitespace-nowrap ${item.rate === input.interestRate + '%' ? 'text-emerald-700' : 'text-slate-800'
                                                     }`}>{item.rate}</span>
+                                                {item.offerprice !== undefined && (
+                                                    <span className="block text-xs text-slate-500 mt-0.5 whitespace-nowrap font-medium">
+                                                        {formatCurrency(item.offerprice, true)}
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="flex flex-col gap-0.5 pt-0.5">
                                                 {item.bankName && <span className="text-sm font-bold text-slate-700">{item.bankName}</span>}
