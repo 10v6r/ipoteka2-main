@@ -396,15 +396,19 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                 }
             });
         }
+        let finalOffers = offers;
+        if (propertyInfoToUse?.extraData) {
+            finalOffers = offers.filter(o => hasSubsidy ? o.subsidy === true : !o.subsidy);
+        }
 
-        if (offers.length === 0) {
+        if (finalOffers.length === 0) {
             return [
                 { rate: '12.5%', comment: 'Стандартная ставка без дополнительных условий' },
             ];
         }
 
-        return offers;
-    }, [propertyInfoToUse?.extraData]);
+        return finalOffers;
+    }, [propertyInfoToUse?.extraData, hasSubsidy]);
 
     // Расчет процента первоначального взноса
     const downPaymentPercentage = useMemo(() => {
