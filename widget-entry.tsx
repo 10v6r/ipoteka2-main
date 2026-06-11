@@ -86,6 +86,17 @@ class MortgageCalculatorWidget {
 const App: React.FC<{ propertyInfo?: PropertyInfo }> = ({ propertyInfo }) => {
   const [isOpen, setIsOpen] = React.useState(false);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   return (
     <div className="mortgage-calculator-widget">
       {!isOpen && (
@@ -116,6 +127,13 @@ const App: React.FC<{ propertyInfo?: PropertyInfo }> = ({ propertyInfo }) => {
 };
 
 const ModalApp: React.FC<{ propertyInfo?: PropertyInfo; onClose: () => void }> = ({ propertyInfo, onClose }) => {
+  React.useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4">
       <div 

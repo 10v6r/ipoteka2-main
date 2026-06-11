@@ -110,7 +110,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     }, [savedData, initialPropertyValue]);
 
     const [calculations, setCalculations] = useState<TabCalculation[]>(initialCalculations);
-    
+
     const [activeTabId, setActiveTabId] = useState<string>(() => {
         if (savedData?.activeTabId) {
             const exists = initialCalculations.some(c => c.id === savedData.activeTabId);
@@ -204,7 +204,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     const deleteTab = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (calculations.length <= 1) return;
-        
+
         const nextCalculations = calculations.filter(c => c.id !== id);
         let nextActiveId = activeTabId;
         if (activeTabId === id) {
@@ -282,6 +282,27 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false); // Подтверждение закрытия
     const [tabToDelete, setTabToDelete] = useState<string | null>(null);
     const [showDebug, setShowDebug] = useState(false);
+
+    React.useEffect(() => {
+        const pressed = new Set<string>();
+        const handleKeyDown = (e: KeyboardEvent) => {
+            pressed.add(e.key.toLowerCase());
+            if (pressed.has('k') && pressed.has('l')) {
+                setShowDebug(prev => !prev);
+                pressed.delete('k');
+            }
+        };
+        const handleKeyUp = (e: KeyboardEvent) => {
+            pressed.delete(e.key.toLowerCase());
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
+
     const dateInputRef = useRef<HTMLInputElement>(null);
     const rateButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -300,6 +321,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     React.useEffect(() => {
         if (!isRateInfoOpen) return;
         const handleScroll = (e: Event) => {
+            if (window.innerWidth < 1024) return;
             const target = e.target as HTMLElement;
             // Не закрываем тултип, если скролл происходит внутри него самого
             if (target && typeof target.closest === 'function' && target.closest('.rate-tooltip-container')) {
@@ -307,7 +329,10 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
             }
             setIsRateInfoOpen(false);
         };
-        const handleResize = () => setIsRateInfoOpen(false);
+        const handleResize = () => {
+            if (window.innerWidth < 1024) return;
+            setIsRateInfoOpen(false);
+        };
 
         window.addEventListener('scroll', handleScroll, true);
         window.addEventListener('resize', handleResize);
@@ -318,6 +343,68 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     }, [isRateInfoOpen]);
 
     const result = useMemo(() => calculateMortgage(input), [input]);
+
+    const apiOffers = useMemo(() => {
+        const offers: Array<{
+            rate: string;
+            comment: string;
+            bankName?: string;
+            price?: number;
+            offerprice?: number;
+            frommonths?: number;
+            tomonths?: number;
+            subsidy?: boolean;
+            offertermUid?: string;
+            offertermName?: string;
+        }> = [];
+
+        if (propertyInfoToUse?.extraData && Array.isArray(propertyInfoToUse.extraData)) {
+            propertyInfoToUse.extraData.forEach((group: any) => {
+                if (group.items && Array.isArray(group.items)) {
+                    group.items.forEach((item: any) => {
+                        if (item.rates && Array.isArray(item.rates)) {
+                            item.rates.forEach((rateObj: any) => {
+                                const baseOffer = {
+                                    rate: rateObj.rate + '%',
+                                    comment: rateObj.comment || '',
+                                    bankName: item.bank?.name || '',
+                                    price: item.price,
+                                    offerprice: item.offerprice,
+                                    frommonths: rateObj.frommonths,
+                                    tomonths: rateObj.tomonths,
+                                    subsidy: item.subsidy,
+                                };
+
+                                if (item.offerterms && Array.isArray(item.offerterms) && item.offerterms.length > 0) {
+                                    item.offerterms.forEach((term: any) => {
+                                        offers.push({
+                                            ...baseOffer,
+                                            offertermUid: term.uid,
+                                            offertermName: term.name,
+                                        });
+                                    });
+                                } else {
+                                    offers.push({
+                                        ...baseOffer,
+                                        offertermUid: undefined,
+                                        offertermName: undefined,
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        if (offers.length === 0) {
+            return [
+                { rate: '12.5%', comment: 'Стандартная ставка без дополнительных условий' },
+            ];
+        }
+
+        return offers;
+    }, [propertyInfoToUse?.extraData]);
 
     // Расчет процента первоначального взноса
     const downPaymentPercentage = useMemo(() => {
@@ -521,15 +608,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                         onClick={() => {
                                             if (tabToDelete !== calc.id) changeActiveTab(calc.id);
                                         }}
-                                        className={`flex items-center gap-1 pl-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
-                                            calculations.length > 1 ? 'pr-1.5' : 'pr-3'
-                                        } ${
-                                            tabToDelete === calc.id
+                                        className={`flex items-center gap-1 pl-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${calculations.length > 1 ? 'pr-1.5' : 'pr-3'
+                                            } ${tabToDelete === calc.id
                                                 ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
                                                 : isActive
                                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
                                                     : 'bg-white text-slate-500 border-slate-200 hover:text-slate-700 hover:bg-slate-50'
-                                        }`}
+                                            }`}
                                     >
                                         {tabToDelete === calc.id ? (
                                             <>
@@ -555,9 +640,8 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                 {calculations.length > 1 && (
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setTabToDelete(calc.id); }}
-                                                        className={`p-1 rounded-md transition-colors ${
-                                                            isActive ? 'text-emerald-600 hover:bg-emerald-200/50 hover:text-emerald-800' : 'text-slate-400 hover:bg-slate-200 hover:text-slate-700'
-                                                        }`}
+                                                        className={`p-1 rounded-md transition-colors ${isActive ? 'text-emerald-600 hover:bg-emerald-200/50 hover:text-emerald-800' : 'text-slate-400 hover:bg-slate-200 hover:text-slate-700'
+                                                            }`}
                                                     >
                                                         <X size={14} />
                                                     </button>
@@ -620,18 +704,17 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                 onChange={(e) => setHasSubsidy(e.target.checked)}
                                 className="sr-only"
                             />
-                            <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${
-                                hasSubsidy 
-                                    ? 'bg-emerald-600 border-emerald-600 group-hover:bg-emerald-700 group-hover:border-emerald-700' 
-                                    : 'border-slate-300 bg-white group-hover:border-slate-400'
-                            }`}>
-                                <svg 
-                                    className={`w-3 h-3 text-white transition-opacity duration-200 ${hasSubsidy ? 'opacity-100' : 'opacity-0'}`} 
-                                    viewBox="0 0 12 10" 
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    strokeWidth="2" 
-                                    strokeLinecap="round" 
+                            <div className={`w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center ${hasSubsidy
+                                ? 'bg-emerald-600 border-emerald-600 group-hover:bg-emerald-700 group-hover:border-emerald-700'
+                                : 'border-slate-300 bg-white group-hover:border-slate-400'
+                                }`}>
+                                <svg
+                                    className={`w-3 h-3 text-white transition-opacity duration-200 ${hasSubsidy ? 'opacity-100' : 'opacity-0'}`}
+                                    viewBox="0 0 12 10"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
                                     strokeLinejoin="round"
                                 >
                                     <path d="M1 5.5L4 8.5L11 1.5" />
@@ -746,8 +829,8 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                     key={years}
                                     onClick={() => setInput({ ...input, years })}
                                     className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${input.years === years
-                                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm'
-                                            : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
+                                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm'
+                                        : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
                                         }`}
                                 >
                                     {years} лет
@@ -792,11 +875,10 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                 <button
                                     ref={rateButtonRef}
                                     onClick={() => setIsRateInfoOpen(!isRateInfoOpen)}
-                                    className={`h-full flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${
-                                        isRateInfoOpen
-                                            ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
-                                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:shadow-md'
-                                    }`}
+                                    className={`h-full flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-all whitespace-nowrap ${isRateInfoOpen
+                                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:shadow-md'
+                                        }`}
                                 >
                                     <Info size={16} />
                                     Узнать
@@ -827,7 +909,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                     top: tooltipTop,
                                                 }}
                                             >
-                                                <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-5 relative max-h-[380px] overflow-y-auto">
+                                                <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-5 relative overflow-y-auto overscroll-contain" style={{ maxHeight: 'calc(100vh - 40px)' }}>
                                                     {/* Стрелка влево — привязана к позиции кнопки */}
                                                     <div className="absolute right-full -translate-y-1/2" style={{ top: arrowTop }}>
                                                         <div className="w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-r-[8px] border-r-white drop-shadow-sm"></div>
@@ -842,26 +924,33 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                         </button>
                                                     </div>
                                                     <div className="space-y-2.5">
-                                                        {[
-                                                            { rate: '10.5%', comment: 'Базовая ставка при ПВ от 20.1%, страхование жизни' },
-                                                            { rate: '11.2%', comment: 'Базовая ставка при ПВ от 10.5%, страхование жизни' },
-                                                            { rate: '12.5%', comment: 'Стандартная ставка без дополнительных условий' },
-                                                            { rate: '6.0%', comment: 'Семейная ипотека, ПВ от 20.1%, страховка жизни' },
-                                                            { rate: '13.5%', comment: 'Без страхования жизни, ПВ от 20.1%' },
-                                                            { rate: '14.0%', comment: 'Минимальный ПВ 10.5%, без страховки жизни' },
-                                                        ].map((item, idx) => (
+                                                        {apiOffers.map((item, idx) => (
                                                             <div
                                                                 key={idx}
-                                                                className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${
-                                                                    item.rate === input.interestRate + '%'
-                                                                        ? 'bg-emerald-50 border-emerald-200'
-                                                                        : 'bg-slate-50/50 border-slate-100 hover:bg-slate-50 hover:border-slate-200'
-                                                                }`}
+                                                                className={`flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer ${item.rate === input.interestRate + '%'
+                                                                    ? 'bg-emerald-50 border-emerald-200'
+                                                                    : 'bg-slate-50/50 border-slate-100 hover:bg-slate-50 hover:border-slate-200'
+                                                                    }`}
                                                             >
-                                                                <span className={`text-lg font-bold whitespace-nowrap ${
-                                                                    item.rate === input.interestRate + '%' ? 'text-emerald-700' : 'text-slate-800'
-                                                                }`}>{item.rate}</span>
-                                                                <p className="text-xs text-slate-500 leading-relaxed pt-1">{item.comment}</p>
+                                                                <div className="w-[4.5rem] shrink-0 text-left">
+                                                                    <span className={`text-lg font-bold whitespace-nowrap ${item.rate === input.interestRate + '%' ? 'text-emerald-700' : 'text-slate-800'
+                                                                        }`}>{item.rate}</span>
+                                                                </div>
+                                                                <div className="flex flex-col gap-0.5 pt-0.5">
+                                                                    {item.bankName && <span className="text-xs font-bold text-slate-700">{item.bankName}</span>}
+                                                                    <p className="text-xs text-slate-500 leading-relaxed">{item.comment}</p>
+                                                                    {showDebug && (
+                                                                        <div className="mt-1.5 p-2 bg-slate-800 text-emerald-400 text-[10px] rounded leading-tight font-mono break-all">
+                                                                            price: {item.price}<br/>
+                                                                            offerprice: {item.offerprice}<br/>
+                                                                            frommonths: {item.frommonths}<br/>
+                                                                            tomonths: {item.tomonths}<br/>
+                                                                            subsidy: {item.subsidy ? 'true' : 'false'}<br/>
+                                                                            uid: {item.offertermUid}<br/>
+                                                                            name: {item.offertermName}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -884,12 +973,12 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                 onClick={() => setIsRateInfoOpen(false)}
                             />
                             {/* Контент модалки */}
-                            <div className="relative w-full max-w-lg bg-white rounded-t-3xl p-6 pb-8 shadow-2xl animate-fade-in-up z-10">
+                            <div className="relative w-full max-w-lg bg-white rounded-t-3xl p-6 pb-8 shadow-2xl animate-fade-in-up z-10 max-h-[75vh] flex flex-col">
                                 {/* Индикатор свайпа */}
-                                <div className="flex justify-center mb-4">
+                                <div className="flex justify-center mb-4 shrink-0">
                                     <div className="w-10 h-1 bg-slate-300 rounded-full"></div>
                                 </div>
-                                <div className="flex items-center justify-between mb-5">
+                                <div className="flex items-center justify-between mb-5 shrink-0">
                                     <h4 className="text-lg font-bold text-slate-800">Информация о ставке</h4>
                                     <button
                                         onClick={() => setIsRateInfoOpen(false)}
@@ -898,27 +987,34 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                         <X size={20} />
                                     </button>
                                 </div>
-                                <div className="space-y-3">
-                                    {[
-                                        { rate: '10.5%', comment: 'Базовая ставка при ПВ от 20.1%, страхование жизни' },
-                                        { rate: '11.2%', comment: 'Базовая ставка при ПВ от 10.5%, страхование жизни' },
-                                        { rate: '12.5%', comment: 'Стандартная ставка без дополнительных условий' },
-                                        { rate: '6.0%', comment: 'Семейная ипотека, ПВ от 20.1%, страховка жизни' },
-                                        { rate: '13.5%', comment: 'Без страхования жизни, ПВ от 20.1%' },
-                                        { rate: '14.0%', comment: 'Минимальный ПВ 10.5%, без страховки жизни' },
-                                    ].map((item, idx) => (
+                                <div className="space-y-3 overflow-y-auto flex-1 pr-2">
+                                    {apiOffers.map((item, idx) => (
                                         <div
                                             key={idx}
-                                            className={`flex items-start gap-3 p-3.5 rounded-2xl border transition-colors cursor-pointer ${
-                                                item.rate === input.interestRate + '%'
-                                                    ? 'bg-emerald-50 border-emerald-200'
-                                                    : 'bg-slate-50/50 border-slate-100 hover:bg-slate-50 hover:border-slate-200'
-                                            }`}
+                                            className={`flex items-start gap-3 p-3.5 rounded-2xl border transition-colors cursor-pointer ${item.rate === input.interestRate + '%'
+                                                ? 'bg-emerald-50 border-emerald-200'
+                                                : 'bg-slate-50/50 border-slate-100 hover:bg-slate-50 hover:border-slate-200'
+                                                }`}
                                         >
-                                            <span className={`text-xl font-bold whitespace-nowrap ${
-                                                item.rate === input.interestRate + '%' ? 'text-emerald-700' : 'text-slate-800'
-                                            }`}>{item.rate}</span>
-                                            <p className="text-sm text-slate-500 leading-relaxed pt-0.5">{item.comment}</p>
+                                            <div className="w-[5rem] shrink-0 text-left">
+                                                <span className={`text-xl font-bold whitespace-nowrap ${item.rate === input.interestRate + '%' ? 'text-emerald-700' : 'text-slate-800'
+                                                    }`}>{item.rate}</span>
+                                            </div>
+                                            <div className="flex flex-col gap-0.5 pt-0.5">
+                                                {item.bankName && <span className="text-sm font-bold text-slate-700">{item.bankName}</span>}
+                                                <p className="text-sm text-slate-500 leading-relaxed">{item.comment}</p>
+                                                {showDebug && (
+                                                    <div className="mt-1.5 p-2 bg-slate-800 text-emerald-400 text-[10px] rounded leading-tight font-mono break-all">
+                                                        price: {item.price}<br/>
+                                                        offerprice: {item.offerprice}<br/>
+                                                        frommonths: {item.frommonths}<br/>
+                                                        tomonths: {item.tomonths}<br/>
+                                                        subsidy: {item.subsidy ? 'true' : 'false'}<br/>
+                                                        uid: {item.offertermUid}<br/>
+                                                        name: {item.offertermName}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -973,7 +1069,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                 {/* Верхние карточки сводки */}
                 <div className="p-4 md:p-6 border-b border-slate-100 bg-slate-50/50 shrink-0">
                     <h2 className="text-lg md:text-xl font-bold text-slate-800 mb-4">
-                        Результаты расчет<span onClick={() => setShowDebug(!showDebug)}>а</span>
+                        Результаты расчета
                     </h2>
 
                     {showDebug && propertyInfoToUse.extraData && (
@@ -1405,9 +1501,10 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                     <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center animate-fade-in-up">
                         {/* Декоративная иллюстрация с папкой и улетающими вкладками расчетов */}
                         <div className="relative w-48 h-36 mb-4 flex items-center justify-center">
-                            
+
                             <svg className="w-full h-full relative z-10" viewBox="0 -10 180 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <style dangerouslySetInnerHTML={{ __html: `
+                                <style dangerouslySetInnerHTML={{
+                                    __html: `
                                     @keyframes levitate {
                                         0% { transform: translateY(0px); }
                                         50% { transform: translateY(-6px); }
@@ -1436,7 +1533,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                         <stop offset="0%" stopColor="#ecfdf5" stopOpacity="0.8" />
                                         <stop offset="100%" stopColor="#ecfdf5" stopOpacity="0" />
                                     </radialGradient>
-                                    
+
                                     <linearGradient id="calcBodyGrad" x1="50" y1="20" x2="130" y2="120" gradientUnits="userSpaceOnUse">
                                         <stop offset="0%" stopColor="#ffffff" />
                                         <stop offset="100%" stopColor="#f1f5f9" />
@@ -1490,23 +1587,23 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                 {/* Основной калькулятор */}
                                 <g className="calc-float" filter="url(#calcShadow)">
                                     <rect x="55" y="15" width="70" height="110" rx="14" fill="url(#calcBodyGrad)" stroke="url(#calcBorderGrad)" strokeWidth="1.5" />
-                                    
+
                                     {/* Дисплей */}
                                     <rect x="65" y="25" width="50" height="22" rx="6" fill="url(#calcDisplayGrad)" stroke="#10b981" strokeOpacity="0.2" strokeWidth="1" />
                                     <path d="M 105 38 L 105 38.1" stroke="#059669" strokeWidth="3" strokeLinecap="round" />
                                     <path d="M 98 38 L 98 38.1" stroke="#059669" strokeWidth="3" strokeLinecap="round" />
                                     <path d="M 91 38 L 91 38.1" stroke="#059669" strokeWidth="3" strokeLinecap="round" />
                                     <path d="M 75 38 L 82 38" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.5" />
-                                    
+
                                     {/* Кнопки */}
                                     <rect x="65" y="55" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
                                     <rect x="84" y="55" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
                                     <rect x="103" y="55" width="12" height="12" rx="4" fill="url(#accentBtnGrad)" />
-                                    
+
                                     <rect x="65" y="73" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
                                     <rect x="84" y="73" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
                                     <rect x="103" y="73" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
-                                    
+
                                     <rect x="65" y="91" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
                                     <rect x="84" y="91" width="12" height="12" rx="4" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="1" />
                                     <rect x="103" y="91" width="12" height="28" rx="4" fill="url(#equalBtnGrad)" />
