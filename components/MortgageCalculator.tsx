@@ -938,6 +938,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                                 </div>
                                                                 <div className="flex flex-col gap-0.5 pt-0.5">
                                                                     {item.bankName && <span className="text-xs font-bold text-slate-700">{item.bankName}</span>}
+                                                                    {item.offertermName && <span className="text-xs font-semibold text-slate-600">{item.offertermName}</span>}
                                                                     <p className="text-xs text-slate-500 leading-relaxed">{item.comment}</p>
                                                                     {showDebug && (
                                                                         <div className="mt-1.5 p-2 bg-slate-800 text-emerald-400 text-[10px] rounded leading-tight font-mono break-all">
@@ -1002,6 +1003,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                             </div>
                                             <div className="flex flex-col gap-0.5 pt-0.5">
                                                 {item.bankName && <span className="text-sm font-bold text-slate-700">{item.bankName}</span>}
+                                                {item.offertermName && <span className="text-sm font-semibold text-slate-600">{item.offertermName}</span>}
                                                 <p className="text-sm text-slate-500 leading-relaxed">{item.comment}</p>
                                                 {showDebug && (
                                                     <div className="mt-1.5 p-2 bg-slate-800 text-emerald-400 text-[10px] rounded leading-tight font-mono break-all">
