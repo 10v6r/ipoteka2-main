@@ -953,20 +953,20 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                                     }`}
                                                             >
                                                                 <div className="w-fit min-w-[4.5rem] pr-2 shrink-0 text-left">
-                                                                    <span className={`text-lg font-bold whitespace-nowrap ${item.rate === input.interestRate + '%' ? 'text-emerald-700' : 'text-slate-800'
+                                                                    <span className={`text-lg font-bold whitespace-nowrap cursor-pointer ${item.rate === input.interestRate + '%' ? 'text-emerald-700' : 'text-slate-800'
                                                                         }`}>{item.rate}</span>
                                                                     {item.offerprice !== undefined && (
-                                                                        <span className="block text-[10px] text-slate-500 mt-0.5 whitespace-nowrap font-medium">
+                                                                        <span className="block text-[10px] text-slate-500 mt-0.5 whitespace-nowrap font-medium cursor-pointer">
                                                                             {formatCurrency(item.offerprice, true)}
                                                                         </span>
                                                                     )}
                                                                 </div>
-                                                                <div className="flex flex-col gap-0.5 pt-0.5">
-                                                                    {item.bankName && <span className="text-xs font-bold text-slate-700">{item.bankName}</span>}
-                                                                    {item.offertermName && <span className="text-xs font-semibold text-slate-600">{item.offertermName}</span>}
-                                                                    <p className="text-xs text-slate-500 leading-relaxed">{item.comment}</p>
+                                                                <div className="flex flex-col gap-0.5 pt-0.5 cursor-pointer">
+                                                                    {item.bankName && <span className="text-xs font-bold text-slate-700 cursor-pointer">{item.bankName}</span>}
+                                                                    {item.offertermName && <span className="text-xs font-semibold text-slate-600 cursor-pointer">{item.offertermName}</span>}
+                                                                    <p className="text-xs text-slate-500 leading-relaxed cursor-pointer">{item.comment}</p>
                                                                     {(item.frommonths !== undefined || item.tomonths !== undefined) && (
-                                                                        <span className="text-[11px] text-slate-400 mt-0.5 block">
+                                                                        <span className="text-[11px] text-slate-400 mt-0.5 block cursor-pointer">
                                                                             {item.frommonths !== undefined ? `От ${item.frommonths} ` : ''}
                                                                             {item.tomonths !== undefined ? (item.frommonths !== undefined ? `до ${item.tomonths} ` : `До ${item.tomonths} `) : ''}
                                                                             мес.
@@ -1038,20 +1038,20 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                 }`}
                                         >
                                             <div className="w-fit min-w-[5rem] pr-2 shrink-0 text-left">
-                                                <span className={`text-xl font-bold whitespace-nowrap ${item.rate === input.interestRate + '%' ? 'text-emerald-700' : 'text-slate-800'
+                                                <span className={`text-xl font-bold whitespace-nowrap cursor-pointer ${item.rate === input.interestRate + '%' ? 'text-emerald-700' : 'text-slate-800'
                                                     }`}>{item.rate}</span>
                                                 {item.offerprice !== undefined && (
-                                                    <span className="block text-xs text-slate-500 mt-0.5 whitespace-nowrap font-medium">
+                                                    <span className="block text-xs text-slate-500 mt-0.5 whitespace-nowrap font-medium cursor-pointer">
                                                         {formatCurrency(item.offerprice, true)}
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="flex flex-col gap-0.5 pt-0.5">
-                                                {item.bankName && <span className="text-sm font-bold text-slate-700">{item.bankName}</span>}
-                                                {item.offertermName && <span className="text-sm font-semibold text-slate-600">{item.offertermName}</span>}
-                                                <p className="text-sm text-slate-500 leading-relaxed">{item.comment}</p>
+                                            <div className="flex flex-col gap-0.5 pt-0.5 cursor-pointer">
+                                                {item.bankName && <span className="text-sm font-bold text-slate-700 cursor-pointer">{item.bankName}</span>}
+                                                {item.offertermName && <span className="text-sm font-semibold text-slate-600 cursor-pointer">{item.offertermName}</span>}
+                                                <p className="text-sm text-slate-500 leading-relaxed cursor-pointer">{item.comment}</p>
                                                 {(item.frommonths !== undefined || item.tomonths !== undefined) && (
-                                                    <span className="text-xs text-slate-400 mt-0.5 block">
+                                                    <span className="text-xs text-slate-400 mt-0.5 block cursor-pointer">
                                                         {item.frommonths !== undefined ? `От ${item.frommonths} ` : ''}
                                                         {item.tomonths !== undefined ? (item.frommonths !== undefined ? `до ${item.tomonths} ` : `До ${item.tomonths} `) : ''}
                                                         мес.
