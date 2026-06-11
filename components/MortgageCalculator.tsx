@@ -398,7 +398,15 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         }
         let finalOffers = offers;
         if (propertyInfoToUse?.extraData) {
-            finalOffers = offers.filter(o => hasSubsidy ? o.subsidy === true : !o.subsidy);
+            const currentMonths = input.years * 12;
+            
+            finalOffers = offers.filter(o => {
+                const subsidyMatch = hasSubsidy ? o.subsidy === true : !o.subsidy;
+                const fromMonthsMatch = typeof o.frommonths === 'number' ? currentMonths >= o.frommonths : true;
+                const toMonthsMatch = typeof o.tomonths === 'number' ? currentMonths <= o.tomonths : true;
+                
+                return subsidyMatch && fromMonthsMatch && toMonthsMatch;
+            });
         }
 
         if (finalOffers.length === 0) {
@@ -408,7 +416,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         }
 
         return finalOffers;
-    }, [propertyInfoToUse?.extraData, hasSubsidy]);
+    }, [propertyInfoToUse?.extraData, hasSubsidy, input.years]);
 
     // Расчет процента первоначального взноса
     const downPaymentPercentage = useMemo(() => {
@@ -944,6 +952,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                                     {item.bankName && <span className="text-xs font-bold text-slate-700">{item.bankName}</span>}
                                                                     {item.offertermName && <span className="text-xs font-semibold text-slate-600">{item.offertermName}</span>}
                                                                     <p className="text-xs text-slate-500 leading-relaxed">{item.comment}</p>
+                                                                    {(item.frommonths !== undefined || item.tomonths !== undefined) && (
+                                                                        <span className="text-[11px] text-slate-400 mt-0.5 block">
+                                                                            {item.frommonths !== undefined ? `От ${item.frommonths} ` : ''}
+                                                                            {item.tomonths !== undefined ? (item.frommonths !== undefined ? `до ${item.tomonths} ` : `До ${item.tomonths} `) : ''}
+                                                                            мес.
+                                                                        </span>
+                                                                    )}
                                                                     {showDebug && (
                                                                         <div className="mt-1.5 p-2 bg-slate-800 text-emerald-400 text-[10px] rounded leading-tight font-mono break-all">
                                                                             price: {item.price}<br/>
@@ -1009,6 +1024,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                 {item.bankName && <span className="text-sm font-bold text-slate-700">{item.bankName}</span>}
                                                 {item.offertermName && <span className="text-sm font-semibold text-slate-600">{item.offertermName}</span>}
                                                 <p className="text-sm text-slate-500 leading-relaxed">{item.comment}</p>
+                                                {(item.frommonths !== undefined || item.tomonths !== undefined) && (
+                                                    <span className="text-xs text-slate-400 mt-0.5 block">
+                                                        {item.frommonths !== undefined ? `От ${item.frommonths} ` : ''}
+                                                        {item.tomonths !== undefined ? (item.frommonths !== undefined ? `до ${item.tomonths} ` : `До ${item.tomonths} `) : ''}
+                                                        мес.
+                                                    </span>
+                                                )}
                                                 {showDebug && (
                                                     <div className="mt-1.5 p-2 bg-slate-800 text-emerald-400 text-[10px] rounded leading-tight font-mono break-all">
                                                         price: {item.price}<br/>
