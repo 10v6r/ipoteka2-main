@@ -113,19 +113,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         return `mortgage_calc_tabs_${encodeURIComponent(id)}`;
     }, [propertyInfoToUse]);
 
-    // Загрузка сохраненных расчетов из localStorage
-    const savedData = useMemo(() => {
-        if (typeof window === 'undefined') return null;
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-            try {
-                return JSON.parse(saved);
-            } catch (e) {
-                console.error("Ошибка парсинга localStorage:", e);
-            }
-        }
-        return null;
+    // Очистка предыдущих расчетов при открытии калькулятора
+    useEffect(() => {
+        localStorage.removeItem(storageKey);
     }, [storageKey]);
+
+    // При открытии всегда начинаем с чистого состояния — предыдущие расчеты не загружаем
+    const savedData = null;
 
     const initialCalculations = useMemo<TabCalculation[]>(() => {
         if (savedData?.calculations && Array.isArray(savedData.calculations) && savedData.calculations.length > 0) {
@@ -535,16 +529,18 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         }
     };
 
-    const result = useMemo(() => {
-        // Пересчитываем первоначальный взнос, чтобы сохранить процент (ПВ) от новой сниженной стоимости
-        const effectiveDownPayment = (effectivePrice * downPaymentPercentage) / 100;
+    // Эффективный первоначальный взнос с учётом скидки на квартиру
+    const effectiveDownPayment = useMemo(() => {
+        return (effectivePrice * downPaymentPercentage) / 100;
+    }, [effectivePrice, downPaymentPercentage]);
 
+    const result = useMemo(() => {
         return calculateMortgage({
             ...input,
             propertyValue: effectivePrice,
             downPayment: effectiveDownPayment
         });
-    }, [input, effectivePrice, downPaymentPercentage]);
+    }, [input, effectivePrice, effectiveDownPayment]);
 
     const chartData = [
         { name: 'Основной долг', value: result.loanAmount, color: '#10b981' }, // изумрудный-500
@@ -826,6 +822,19 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                             <span className="flex items-center gap-2">
                                 <Building2 size={16} className="text-slate-400" />
                                 Стоимость недвижимости
+                                {/* Индикатор скидки — показываем при наличии сниженной цены */}
+                                {minOfferPrice !== undefined && minOfferPrice < input.propertyValue && (
+                                    <span className="relative group/discount inline-flex">
+                                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 cursor-help transition-colors group-hover/discount:bg-emerald-200">
+                                            <Percent size={11} strokeWidth={2.5} />
+                                        </span>
+                                        {/* Тултип при наведении */}
+                                        <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1.5 bg-slate-800 text-white text-[11px] font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover/discount:opacity-100 transition-opacity duration-200 z-50">
+                                            Стоимость изменена согласно выбранным условиям
+                                            <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-slate-800"></span>
+                                        </span>
+                                    </span>
+                                )}
                             </span>
                         }
                         value={input.propertyValue}
@@ -878,7 +887,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                 Первоначальный взнос
                             </span>
                             <div className="text-right">
-                                <div className="text-lg font-bold text-slate-900 leading-none mb-1">{formatCurrency(input.downPayment)}</div>
+                                <div className="text-lg font-bold text-slate-900 leading-none mb-1">{formatCurrency(effectiveDownPayment)}</div>
                                 <div className="text-sm text-slate-500 font-medium leading-none">{downPaymentPercentage.toLocaleString('ru-RU', { maximumFractionDigits: 1 })}%</div>
                             </div>
                         </div>
@@ -1221,7 +1230,8 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                     </button>
                 </div>
 
-                {/* Кнопка PDF - Видима на планшете/десктопе для доступности во вкладке ввода */}
+                {/* Кнопка PDF - Видима на планшете/десктопе для доступности во вкладке ввода. Скрыта при 100% первоначальном взносе */}
+                {Math.abs(downPaymentPercentage - 100) > 0.1 && (
                 <div className="mt-8 pt-6 border-t border-slate-200">
                     <button
                         onClick={handleExportPDF}
@@ -1232,6 +1242,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                         {isGeneratingPdf ? 'Генерация...' : 'Скачать PDF'}
                     </button>
                 </div>
+                )}
             </div>
 
             {/* Правая панель: Результаты */}
@@ -1267,18 +1278,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                         <p className="text-slate-500 max-w-md text-base md:text-lg font-medium leading-relaxed">
                             Вы выбрали 100% первоначальный взнос. Ипотека не требуется, вы приобретаете недвижимость за полную стоимость.
                         </p>
-                        
-                        {/* Мобильная кнопка PDF */}
-                        <div className="lg:hidden mt-10 w-full max-w-xs">
-                            <button
-                                onClick={handleExportPDF}
-                                disabled={isGeneratingPdf}
-                                className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium shadow-sm transition-colors ${isGeneratingPdf ? 'bg-slate-400 cursor-not-allowed text-slate-100' : 'bg-slate-800 text-white hover:bg-slate-700'}`}
-                            >
-                                {isGeneratingPdf ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                                {isGeneratingPdf ? 'Генерация...' : 'Скачать PDF'}
-                            </button>
-                        </div>
+
                     </div>
                 ) : (
                     <>
