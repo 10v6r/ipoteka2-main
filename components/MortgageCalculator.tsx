@@ -1230,8 +1230,8 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                     </button>
                 </div>
 
-                {/* Кнопка PDF - Видима на планшете/десктопе для доступности во вкладке ввода. Скрыта при 100% первоначальном взносе */}
-                {Math.abs(downPaymentPercentage - 100) > 0.1 && (
+                {/* Кнопка PDF - Видима на планшете/десктопе для доступности во вкладке ввода. Скрыта при 100% и при 0% первоначальном взносе */}
+                {downPaymentPercentage > 0 && Math.abs(downPaymentPercentage - 100) > 0.1 && (
                 <div className="mt-8 pt-6 border-t border-slate-200">
                     <button
                         onClick={handleExportPDF}
@@ -1331,7 +1331,8 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                         </div>
                     </div>
 
-                    {/* Мобильная кнопка PDF внутри результатов (Только если Левая панель скрыта) */}
+                    {/* Мобильная кнопка PDF внутри результатов (Только если Левая панель скрыта). Скрыта при 0% первоначальном взносе */}
+                    {downPaymentPercentage > 0 && (
                     <div className="lg:hidden mt-6 pt-4 border-t border-slate-200">
                         <button
                             onClick={handleExportPDF}
@@ -1342,6 +1343,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                             {isGeneratingPdf ? 'Генерация...' : 'Скачать PDF'}
                         </button>
                     </div>
+                    )}
                 </div>
 
                 {/* Переключатель вида - Закреплен на мобильных */}
