@@ -259,12 +259,6 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     const handleMortgageTypeChange = (type: 'base' | 'family') => {
         updateActiveCalc(c => {
             let defaultDownPayment = Math.round(c.input.propertyValue * 0.201);
-            if (type === 'family') {
-                const currentLoan = c.input.propertyValue - defaultDownPayment;
-                if (currentLoan > 6000000) {
-                    defaultDownPayment = Math.max(0, c.input.propertyValue - 6000000);
-                }
-            }
 
             return {
                 ...c,
@@ -285,16 +279,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     const handlePropertyValueChange = (val: number) => {
         let newDownPayment = input.downPayment;
 
-        // Если семейная ипотека, проверяем, чтобы кредит не превышал 6 млн
-        if (mortgageType === 'family') {
-            const maxLoan = 6000000;
-            const minDown = Math.max(0, val - maxLoan);
-            if (newDownPayment < minDown) {
-                newDownPayment = minDown;
-            }
-        }
-
-        // Также проверяем, чтобы ПВ не был больше стоимости (стандартная логика)
+        // Проверяем, чтобы ПВ не был больше стоимости (стандартная логика)
         if (newDownPayment > val) {
             newDownPayment = val;
         }
@@ -305,6 +290,14 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     // Обновление первоначального взноса с проверкой лимитов
     const handleDownPaymentChange = (val: number) => {
         let newDownPayment = val;
+
+        if (mortgageType === 'family' && effectivePrice > 0) {
+            const minDown = Math.max(0, effectivePrice - 6000000);
+            const requiredInputDownPayment = Math.ceil(minDown * (input.propertyValue / effectivePrice));
+            if (newDownPayment < requiredInputDownPayment) {
+                newDownPayment = requiredInputDownPayment;
+            }
+        }
 
         setInput({ ...input, downPayment: newDownPayment });
     };
@@ -556,19 +549,22 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         prevPriceRef.current = effectivePrice;
     }, [effectivePrice]);
 
-    const handleDownPaymentBlur = () => {
-        if (mortgageType === 'family') {
-            const minDown = Math.max(0, effectivePrice - 6000000);
-            if (input.downPayment < minDown) {
-                setInput({ ...input, downPayment: minDown });
-            }
-        }
-    };
-
     // Эффективный первоначальный взнос с учётом скидки на квартиру
     const effectiveDownPayment = useMemo(() => {
         return (effectivePrice * downPaymentPercentage) / 100;
     }, [effectivePrice, downPaymentPercentage]);
+
+    useEffect(() => {
+        if (mortgageType === 'family' && effectivePrice > 0) {
+            const minDown = Math.max(0, effectivePrice - 6000000);
+            if (effectiveDownPayment < minDown) {
+                const requiredInputDownPayment = Math.ceil(minDown * (input.propertyValue / effectivePrice));
+                if (input.downPayment < requiredInputDownPayment) {
+                    setInput(prev => ({ ...prev, downPayment: requiredInputDownPayment }));
+                }
+            }
+        }
+    }, [mortgageType, effectivePrice, input.propertyValue, input.downPayment, effectiveDownPayment]);
 
     const result = useMemo(() => {
         return calculateMortgage({
@@ -975,8 +971,6 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                         const newDownPayment = Math.round(input.propertyValue * (v / 100));
                                         handleDownPaymentChange(newDownPayment);
                                     }}
-                                    onMouseUp={handleDownPaymentBlur}
-                                    onTouchEnd={handleDownPaymentBlur}
                                     className="w-full h-2 bg-slate-200 hover:bg-slate-300 rounded-lg appearance-none cursor-pointer accent-emerald-600 flex relative z-10 transition-colors focus:outline-none"
                                 />
                             </div>
