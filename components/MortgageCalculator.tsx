@@ -379,6 +379,30 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         };
     }, [isRateInfoOpen]);
 
+    const availableDownPayments = useMemo(() => {
+        let has0 = false;
+        let has10_5 = false;
+        
+        if (propertyInfoToUse?.extraData && Array.isArray(propertyInfoToUse.extraData)) {
+            propertyInfoToUse.extraData.forEach((group: any) => {
+                if (group.items && Array.isArray(group.items)) {
+                    group.items.forEach((item: any) => {
+                        if (item.offerterms && Array.isArray(item.offerterms)) {
+                            item.offerterms.forEach((term: any) => {
+                                const rule = OFFER_TERM_RULES[term.uid];
+                                if (rule && rule.program === mortgageType) {
+                                    if (rule.exactDownPayment === 0) has0 = true;
+                                    if (rule.exactDownPayment === 10.5) has10_5 = true;
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+        return { has0, has10_5 };
+    }, [propertyInfoToUse?.extraData, mortgageType]);
+
     // result is moved down
     const apiOffers = useMemo(() => {
         const offers: Array<{
@@ -906,15 +930,19 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                             <div className="relative">
                                 <div className="absolute inset-0 left-[8px] right-[8px] pointer-events-none z-20">
                                     {/* Метка 10.5% сверху */}
-                                    <div className="absolute bottom-full mb-1 flex flex-col items-center" style={{ left: '10.5%', transform: 'translateX(-50%)' }}>
-                                        <span className={`transition-all ${Math.abs(downPaymentPercentage - 10.5) < 0.5 ? 'text-emerald-600 font-bold text-[12px]' : 'text-slate-500 text-[11px]'}`}>10.5%</span>
-                                        <div className="w-px h-2 rounded-full bg-slate-200 mt-0.5"></div>
-                                    </div>
-                                    {/* Точка 10.5% */}
-                                    <div
-                                        className={`absolute top-1/2 -mt-[3px] w-1.5 h-1.5 rounded-full transition-colors duration-300 shadow-sm ${downPaymentPercentage >= 10.5 ? 'bg-white' : 'bg-slate-400'}`}
-                                        style={{ left: '10.5%', transform: 'translateX(-50%)' }}
-                                    ></div>
+                                    {availableDownPayments.has10_5 && (
+                                        <>
+                                            <div className="absolute bottom-full mb-1 flex flex-col items-center" style={{ left: '10.5%', transform: 'translateX(-50%)' }}>
+                                                <span className={`transition-all ${Math.abs(downPaymentPercentage - 10.5) < 0.5 ? 'text-emerald-600 font-bold text-[12px]' : 'text-slate-500 text-[11px]'}`}>10.5%</span>
+                                                <div className="w-px h-2 rounded-full bg-slate-200 mt-0.5"></div>
+                                            </div>
+                                            {/* Точка 10.5% */}
+                                            <div
+                                                className={`absolute top-1/2 -mt-[3px] w-1.5 h-1.5 rounded-full transition-colors duration-300 shadow-sm ${downPaymentPercentage >= 10.5 ? 'bg-white' : 'bg-slate-400'}`}
+                                                style={{ left: '10.5%', transform: 'translateX(-50%)' }}
+                                            ></div>
+                                        </>
+                                    )}
 
                                     {/* Точка 20.1% */}
                                     <div
@@ -937,8 +965,11 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                     onChange={(e) => {
                                         let v = parseFloat(e.target.value);
                                         // Притягивание к ключевым отметкам при свободном перемещении
-                                        if (v < 20.1 && v !== 0) {
-                                            const marks = [0, 10.5, 20.1];
+                                        if (v < 20.1 && (availableDownPayments.has0 ? v !== 0 : true)) {
+                                            const marks = [20.1];
+                                            if (availableDownPayments.has10_5) marks.push(10.5);
+                                            if (availableDownPayments.has0) marks.push(0);
+                                            
                                             v = marks.reduce((prev, curr) => Math.abs(curr - v) < Math.abs(prev - v) ? curr : prev);
                                         }
                                         const newDownPayment = Math.round(input.propertyValue * (v / 100));
@@ -952,7 +983,9 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
 
                             {/* Крайние метки 0% и 100% */}
                             <div className="absolute left-0 right-0 top-6 text-[10px] font-medium pointer-events-none">
-                                <span className={`absolute left-0 top-[10px] transition-all ${downPaymentPercentage === 0 ? 'text-emerald-600 font-bold text-[12px]' : 'text-slate-400 text-[11px]'}`}>0%</span>
+                                {availableDownPayments.has0 && (
+                                    <span className={`absolute left-0 top-[10px] transition-all ${downPaymentPercentage === 0 ? 'text-emerald-600 font-bold text-[12px]' : 'text-slate-400 text-[11px]'}`}>0%</span>
+                                )}
                                 <span className={`absolute right-0 top-[10px] transition-all ${downPaymentPercentage >= 99.9 ? 'text-emerald-600 font-bold text-[12px]' : 'text-slate-400 text-[11px]'}`}>100%</span>
                             </div>
                         </div>
