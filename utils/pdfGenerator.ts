@@ -513,7 +513,7 @@ const generatePdfContent = (
     // Примечание внизу
     doc.setFontSize(8);
     doc.setFont('Roboto', 'normal');
-    doc.setTextColor(...TEXT_GRAY);
+    doc.setTextColor(255, 255, 255);
     const noteY = pageHeight - 25; // Над футером (20px высота футера + 5px отступ)
-    doc.text("* Расчет является предварительным и не является публичной офертой.", margin, noteY);
+    doc.text("*Представленный расчет носит информационный характер и актуален на дату его составления. За подробной информацией и уточнением условий обращайтесь к вашему персональному менеджеру", margin, noteY, { maxWidth: contentWidth });
 };

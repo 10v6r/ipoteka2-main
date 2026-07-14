@@ -55,7 +55,7 @@ const OFFER_TERM_RULES: Record<string, OfferTermRule> = {
     "6fdd2010-4eb0-11f1-8278-ac1f6bd9ba5d": { program: 'base', exactDownPayment: 10.5, subsidy: false },
     // Базовая ставка (ЧПВЗ с субсидией)
     "8ee78bf8-4eb0-11f1-8278-ac1f6bd9ba5d": { program: 'base', exactDownPayment: 10.5, subsidy: true },
-    
+
     // Полная оплата - минимальная цена
     "3850ff27-4ea9-11f1-8278-ac1f6bd9ba5d": { exactDownPayment: 100 },
 
@@ -131,13 +131,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
             input: {
                 propertyValue: initialPropertyValue,
                 downPayment: Math.round(initialPropertyValue * 0.201),
-                interestRate: 12.5,
+                interestRate: 0,
                 years: 20,
                 startDate: new Date().toISOString().split('T')[0]
             },
             mortgageType: 'base',
             hasSubsidy: false,
-            rateInputValue: '12.5'
+            rateInputValue: ''
         }];
     }, [savedData, initialPropertyValue]);
 
@@ -219,13 +219,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
             input: {
                 propertyValue: initialPropertyValue,
                 downPayment: Math.round(initialPropertyValue * 0.201),
-                interestRate: 12.5,
+                interestRate: 0,
                 years: 20,
                 startDate: new Date().toISOString().split('T')[0]
             },
             mortgageType: 'base',
             hasSubsidy: false,
-            rateInputValue: '12.5'
+            rateInputValue: ''
         };
         const nextCalculations = [...calculations, newTab];
         setCalculations(nextCalculations);
@@ -255,18 +255,30 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     // Минимальный первоначальный взнос с учетом лимита кредита
     const minDownPaymentByLimit = Math.max(0, input.propertyValue - maxLoanAmount);
 
-    // Обновление типа ипотеки с проверкой лимитов
+    // Обновление типа ипотеки с проверкой лимитов и сбросом значений до умолчания
     const handleMortgageTypeChange = (type: 'base' | 'family') => {
-        setMortgageType(type);
-        if (type === 'family') {
-            const currentLoan = input.propertyValue - input.downPayment;
-            if (currentLoan > 6000000) {
-                setInput(prev => ({
-                    ...prev,
-                    downPayment: prev.propertyValue - 6000000
-                }));
+        updateActiveCalc(c => {
+            let defaultDownPayment = Math.round(c.input.propertyValue * 0.201);
+            if (type === 'family') {
+                const currentLoan = c.input.propertyValue - defaultDownPayment;
+                if (currentLoan > 6000000) {
+                    defaultDownPayment = Math.max(0, c.input.propertyValue - 6000000);
+                }
             }
-        }
+
+            return {
+                ...c,
+                mortgageType: type,
+                hasSubsidy: false,
+                rateInputValue: '',
+                input: {
+                    ...c.input,
+                    downPayment: defaultDownPayment,
+                    years: 20,
+                    interestRate: 0
+                }
+            };
+        });
     };
 
     // Обновление стоимости недвижимости с проверкой лимитов
@@ -429,7 +441,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         let finalOffers = offers;
         if (propertyInfoToUse?.extraData) {
             const currentMonths = input.years * 12;
-            
+
             finalOffers = offers.filter(o => {
                 const fromMonthsMatch = typeof o.frommonths === 'number' ? currentMonths >= o.frommonths : true;
                 const toMonthsMatch = typeof o.tomonths === 'number' ? currentMonths <= o.tomonths : true;
@@ -439,29 +451,29 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
 
                 if (o.offertermUid && OFFER_TERM_RULES[o.offertermUid]) {
                     const rule = OFFER_TERM_RULES[o.offertermUid];
-                    
+
                     if (Math.abs(currentDownpayment - 100) <= 0.1) {
                         // Если ПВ 100%, применяем только условие полной оплаты (игнорируя программу и субсидию)
                         return rule.exactDownPayment === 100;
                     }
-                    
+
                     if (rule.program && rule.program !== mortgageType) return false;
-                    
+
                     if (rule.subsidy !== undefined) {
                         const ruleSubsidyMatchesCheckbox = hasSubsidy ? rule.subsidy === true : rule.subsidy === false;
                         if (!ruleSubsidyMatchesCheckbox) return false;
                     }
-                    
+
                     if (rule.exactDownPayment !== undefined) {
                         if (Math.abs(currentDownpayment - rule.exactDownPayment) > 0.1) return false;
                     }
                     if (rule.minDownPayment !== undefined) {
                         if (currentDownpayment < rule.minDownPayment - 0.1) return false;
                     }
-                    
+
                     return true;
                 }
-                
+
                 if (Math.abs(currentDownpayment - 100) <= 0.1) {
                     // Если ПВ 100%, обычные (fallback) предложения не показываем, только "Полную оплату"
                     return false;
@@ -502,8 +514,8 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     }, [input.downPayment, input.propertyValue]);
 
     const effectivePrice = useMemo(() => {
-        return (minOfferPrice !== undefined && minOfferPrice < input.propertyValue) 
-            ? minOfferPrice 
+        return (minOfferPrice !== undefined && minOfferPrice < input.propertyValue)
+            ? minOfferPrice
             : input.propertyValue;
     }, [minOfferPrice, input.propertyValue]);
 
@@ -689,11 +701,10 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
 
     return (
         <div className="bg-white w-full h-full flex flex-col lg:flex-row overflow-hidden lg:rounded-2xl shadow-2xl relative">
-            
+
             {/* Тост с уведомлением об изменении цены */}
-            <div className={`absolute top-4 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-lg z-50 transition-all duration-500 ease-out flex items-center gap-2 ${
-                priceAlert ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-95 pointer-events-none'
-            }`}>
+            <div className={`absolute top-4 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-lg z-50 transition-all duration-500 ease-out flex items-center gap-2 ${priceAlert ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-95 pointer-events-none'
+                }`}>
                 <Info size={18} className="text-emerald-100" />
                 Стоимость изменилась
             </div>
@@ -1010,14 +1021,18 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                         const raw = e.target.value.replace(/[^\d.,]/g, '');
                                         setRateInputValue(raw);
                                         // Парсим число для расчётов
-                                        const val = parseFloat(raw.replace(',', '.'));
-                                        if (!isNaN(val) && val >= 0 && val <= 50) {
-                                            setInput(prev => ({ ...prev, interestRate: val }));
+                                        if (raw === '') {
+                                            setInput(prev => ({ ...prev, interestRate: 0 }));
+                                        } else {
+                                            const val = parseFloat(raw.replace(',', '.'));
+                                            if (!isNaN(val) && val >= 0 && val <= 50) {
+                                                setInput(prev => ({ ...prev, interestRate: val }));
+                                            }
                                         }
                                     }}
                                     onBlur={() => {
                                         // При потере фокуса форматируем обратно
-                                        setRateInputValue(String(input.interestRate));
+                                        setRateInputValue(input.interestRate === 0 ? '' : String(input.interestRate));
                                     }}
                                     className="w-full pl-4 pr-10 py-2 bg-white border border-slate-200 rounded-xl outline-none transition-all text-lg font-bold text-slate-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 hover:border-slate-300"
                                 />
@@ -1115,12 +1130,12 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                                     )}
                                                                     {showDebug && (
                                                                         <div className="mt-1.5 p-2 bg-slate-800 text-emerald-400 text-[10px] rounded leading-tight font-mono break-all">
-                                                                            price: {item.price}<br/>
-                                                                            offerprice: {item.offerprice}<br/>
-                                                                            frommonths: {item.frommonths}<br/>
-                                                                            tomonths: {item.tomonths}<br/>
-                                                                            subsidy: {item.subsidy ? 'true' : 'false'}<br/>
-                                                                            uid: {item.offertermUid}<br/>
+                                                                            price: {item.price}<br />
+                                                                            offerprice: {item.offerprice}<br />
+                                                                            frommonths: {item.frommonths}<br />
+                                                                            tomonths: {item.tomonths}<br />
+                                                                            subsidy: {item.subsidy ? 'true' : 'false'}<br />
+                                                                            uid: {item.offertermUid}<br />
                                                                             name: {item.offertermName}
                                                                         </div>
                                                                     )}
@@ -1200,12 +1215,12 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                 )}
                                                 {showDebug && (
                                                     <div className="mt-1.5 p-2 bg-slate-800 text-emerald-400 text-[10px] rounded leading-tight font-mono break-all">
-                                                        price: {item.price}<br/>
-                                                        offerprice: {item.offerprice}<br/>
-                                                        frommonths: {item.frommonths}<br/>
-                                                        tomonths: {item.tomonths}<br/>
-                                                        subsidy: {item.subsidy ? 'true' : 'false'}<br/>
-                                                        uid: {item.offertermUid}<br/>
+                                                        price: {item.price}<br />
+                                                        offerprice: {item.offerprice}<br />
+                                                        frommonths: {item.frommonths}<br />
+                                                        tomonths: {item.tomonths}<br />
+                                                        subsidy: {item.subsidy ? 'true' : 'false'}<br />
+                                                        uid: {item.offertermUid}<br />
                                                         name: {item.offertermName}
                                                     </div>
                                                 )}
@@ -1231,17 +1246,17 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                 </div>
 
                 {/* Кнопка PDF - Видима на планшете/десктопе для доступности во вкладке ввода. Скрыта при 100% и при 0% первоначальном взносе */}
-                {downPaymentPercentage > 0 && Math.abs(downPaymentPercentage - 100) > 0.1 && (
-                <div className="mt-8 pt-6 border-t border-slate-200">
-                    <button
-                        onClick={handleExportPDF}
-                        disabled={isGeneratingPdf}
-                        className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium shadow-sm transition-colors ${isGeneratingPdf ? 'bg-slate-400 cursor-not-allowed text-slate-100' : 'bg-slate-800 text-white hover:bg-slate-700'}`}
-                    >
-                        {isGeneratingPdf ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                        {isGeneratingPdf ? 'Генерация...' : 'Скачать PDF'}
-                    </button>
-                </div>
+                {downPaymentPercentage > 0 && Math.abs(downPaymentPercentage - 100) > 0.1 && input.interestRate > 0 && (
+                    <div className="mt-8 pt-6 border-t border-slate-200">
+                        <button
+                            onClick={handleExportPDF}
+                            disabled={isGeneratingPdf}
+                            className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium shadow-sm transition-colors ${isGeneratingPdf ? 'bg-slate-400 cursor-not-allowed text-slate-100' : 'bg-slate-800 text-white hover:bg-slate-700'}`}
+                        >
+                            {isGeneratingPdf ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                            {isGeneratingPdf ? 'Генерация...' : 'Скачать PDF'}
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -1284,81 +1299,93 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                     <>
                         {/* Верхние карточки сводки */}
                         <div className="p-4 md:p-6 border-b border-slate-100 bg-slate-50/50 shrink-0">
-                    <h2 className="text-lg md:text-xl font-bold text-slate-800 mb-4">
-                        Результаты расчета
-                    </h2>
+                            <h2 className="text-lg md:text-xl font-bold text-slate-800 mb-4">
+                                Результаты расчета
+                            </h2>
 
-                    {showDebug && propertyInfoToUse.extraData && (
-                        <div className="mb-4 p-4 bg-slate-800 text-emerald-400 text-xs rounded-xl overflow-auto max-h-64 font-mono shadow-inner">
-                            <pre>{JSON.stringify(propertyInfoToUse.extraData, null, 2)}</pre>
+                            {showDebug && propertyInfoToUse.extraData && (
+                                <div className="mb-4 p-4 bg-slate-800 text-emerald-400 text-xs rounded-xl overflow-auto max-h-64 font-mono shadow-inner">
+                                    <pre>{JSON.stringify(propertyInfoToUse.extraData, null, 2)}</pre>
+                                </div>
+                            )}
+
+                            <div className="relative">
+                                <div className={input.interestRate === 0 ? "blur-md pointer-events-none select-none transition-all duration-300 opacity-60" : "transition-all duration-300"}>
+                                    {/* Основные ключевые метрики - Адаптивная сетка */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
+                                        {/* Ежемесячный платеж */}
+                                        <div className="p-4 md:p-5 bg-emerald-600 rounded-2xl text-white shadow-lg shadow-emerald-200/50">
+                                            <div className="text-emerald-100 text-xs md:text-sm font-medium mb-1">Ежемесячный платеж</div>
+                                            <div className="text-2xl md:text-3xl font-bold tracking-tight">{formatCurrency(result.monthlyPayment)}</div>
+                                        </div>
+
+                                        {/* Сумма кредита */}
+                                        <div className="p-4 md:p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                                            <div className="text-slate-500 text-xs md:text-sm font-medium mb-1">Сумма кредита</div>
+                                            <div className="text-lg md:text-2xl font-bold text-slate-800">{formatCurrency(result.loanAmount)}</div>
+                                            <div className="text-[10px] md:text-xs text-slate-400 mt-1">основной долг</div>
+                                        </div>
+
+                                        {/* Процентная ставка */}
+                                        <div className="p-4 md:p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                                            <div className="text-slate-500 text-xs md:text-sm font-medium mb-1">Процентная ставка</div>
+                                            <div className="text-lg md:text-2xl font-bold text-slate-800 tracking-tight">{input.interestRate}%</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Сетка детальных метрик - Остальные элементы */}
+                                    <div className="grid grid-cols-2 gap-y-4 gap-x-2 md:gap-4">
+                                        {/* Срок */}
+                                        <div className="p-2 md:p-0">
+                                            <div className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Срок</div>
+                                            <div className="font-semibold text-slate-700 text-sm md:text-base">{termMonths} мес. <span className="text-slate-400 font-normal">({input.years} лет)</span></div>
+                                        </div>
+
+                                        {/* Дата первого платежа */}
+                                        <div className="p-2 md:p-0">
+                                            <div className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Дата 1-го платежа</div>
+                                            <div className="font-semibold text-slate-700 text-sm md:text-base">{firstPaymentDate ? formatDate(firstPaymentDate) : '-'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {input.interestRate === 0 && (
+                                    <div className="absolute inset-0 flex items-center justify-center z-10">
+                                        <div className="bg-white/90 backdrop-blur-[2px] px-6 py-4 rounded-2xl shadow-xl border border-slate-100 text-center mx-4">
+                                            <p className="text-slate-800 font-bold text-base md:text-lg">Для просмотра результатов расчета — выберете/укажите % ставку</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Мобильная кнопка PDF внутри результатов (Только если Левая панель скрыта). Скрыта при 0% первоначальном взносе */}
+                            {downPaymentPercentage > 0 && input.interestRate > 0 && (
+                                <div className="lg:hidden mt-6 pt-4 border-t border-slate-200">
+                                    <button
+                                        onClick={handleExportPDF}
+                                        disabled={isGeneratingPdf}
+                                        className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium shadow-sm transition-colors ${isGeneratingPdf ? 'bg-slate-400 cursor-not-allowed text-slate-100' : 'bg-slate-800 text-white hover:bg-slate-700'}`}
+                                    >
+                                        {isGeneratingPdf ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                                        {isGeneratingPdf ? 'Генерация...' : 'Скачать PDF'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                    )}
 
-                    {/* Основные ключевые метрики - Адаптивная сетка */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
-                        {/* Ежемесячный платеж */}
-                        <div className="p-4 md:p-5 bg-emerald-600 rounded-2xl text-white shadow-lg shadow-emerald-200/50">
-                            <div className="text-emerald-100 text-xs md:text-sm font-medium mb-1">Ежемесячный платеж</div>
-                            <div className="text-2xl md:text-3xl font-bold tracking-tight">{formatCurrency(result.monthlyPayment)}</div>
-                        </div>
-
-                        {/* Сумма кредита */}
-                        <div className="p-4 md:p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                            <div className="text-slate-500 text-xs md:text-sm font-medium mb-1">Сумма кредита</div>
-                            <div className="text-lg md:text-2xl font-bold text-slate-800">{formatCurrency(result.loanAmount)}</div>
-                            <div className="text-[10px] md:text-xs text-slate-400 mt-1">основной долг</div>
-                        </div>
-
-                        {/* Процентная ставка */}
-                        <div className="p-4 md:p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
-                            <div className="text-slate-500 text-xs md:text-sm font-medium mb-1">Процентная ставка</div>
-                            <div className="text-lg md:text-2xl font-bold text-slate-800 tracking-tight">{input.interestRate}%</div>
-                        </div>
-                    </div>
-
-                    {/* Сетка детальных метрик - Остальные элементы */}
-                    <div className="grid grid-cols-2 gap-y-4 gap-x-2 md:gap-4">
-                        {/* Срок */}
-                        <div className="p-2 md:p-0">
-                            <div className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Срок</div>
-                            <div className="font-semibold text-slate-700 text-sm md:text-base">{termMonths} мес. <span className="text-slate-400 font-normal">({input.years} лет)</span></div>
-                        </div>
-
-                        {/* Дата первого платежа */}
-                        <div className="p-2 md:p-0">
-                            <div className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Дата 1-го платежа</div>
-                            <div className="font-semibold text-slate-700 text-sm md:text-base">{firstPaymentDate ? formatDate(firstPaymentDate) : '-'}</div>
-                        </div>
-                    </div>
-
-                    {/* Мобильная кнопка PDF внутри результатов (Только если Левая панель скрыта). Скрыта при 0% первоначальном взносе */}
-                    {downPaymentPercentage > 0 && (
-                    <div className="lg:hidden mt-6 pt-4 border-t border-slate-200">
-                        <button
-                            onClick={handleExportPDF}
-                            disabled={isGeneratingPdf}
-                            className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium shadow-sm transition-colors ${isGeneratingPdf ? 'bg-slate-400 cursor-not-allowed text-slate-100' : 'bg-slate-800 text-white hover:bg-slate-700'}`}
-                        >
-                            {isGeneratingPdf ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                            {isGeneratingPdf ? 'Генерация...' : 'Скачать PDF'}
-                        </button>
-                    </div>
-                    )}
-                </div>
-
-                {/* Переключатель вида - Закреплен на мобильных */}
-                <div className="flex px-4 md:px-6 py-2 md:py-4 gap-2 border-b border-slate-50 overflow-x-auto shrink-0 sticky md:static top-0 z-30 bg-white">
-                    <button
-                        onClick={() => setViewMode(ViewMode.Object)}
-                        className={`flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all whitespace-nowrap ${viewMode === ViewMode.Object
-                            ? 'bg-emerald-100 text-emerald-800 shadow-sm'
-                            : 'text-slate-500 hover:bg-slate-50'
-                            }`}
-                    >
-                        <Building2 size={16} className="md:w-[18px] md:h-[18px]" />
-                        Объект
-                    </button>
-                    {/*
+                        {/* Переключатель вида - Закреплен на мобильных */}
+                        <div className="flex px-4 md:px-6 py-2 md:py-4 gap-2 border-b border-slate-50 overflow-x-auto shrink-0 sticky md:static top-0 z-30 bg-white">
+                            <button
+                                onClick={() => setViewMode(ViewMode.Object)}
+                                className={`flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all whitespace-nowrap ${viewMode === ViewMode.Object
+                                    ? 'bg-emerald-100 text-emerald-800 shadow-sm'
+                                    : 'text-slate-500 hover:bg-slate-50'
+                                    }`}
+                            >
+                                <Building2 size={16} className="md:w-[18px] md:h-[18px]" />
+                                Объект
+                            </button>
+                            {/*
                     <button
                         onClick={() => setViewMode(ViewMode.Summary)}
                         className={`flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all whitespace-nowrap ${viewMode === ViewMode.Summary
@@ -1380,339 +1407,339 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                         График платежей
                     </button>
                     */}
-                </div>
-
-                {/* Динамический контент */}
-                {/* Удален отступ p-3 md:p-6 из этого контейнера, чтобы разрешить липкие заголовки во всю ширину в списочном виде */}
-                <div className={`bg-slate-50/30 md:flex-1 md:flex md:flex-col md:min-h-0 ${viewMode === ViewMode.Summary
-                    ? 'md:overflow-y-auto'
-                    : 'md:overflow-y-auto lg:overflow-hidden'
-                    }`}>
-                    {viewMode === ViewMode.Summary ? (
-                        /* Здесь добавлен отступ для вида сводки */
-                        <div className="flex flex-col gap-4 p-3 md:p-6">
-                            <div className="grid grid-cols-1 lg:grid-cols-10 gap-4 min-h-[280px]">
-
-                                {/* Круговая диаграмма */}
-                                <div className="lg:col-span-3 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-                                    <h3 className="text-base md:text-lg font-bold text-slate-700 mb-3">Структура выплат</h3>
-                                    <div className="flex-1 min-h-[200px] md:min-h-[220px]">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={chartData}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={80}
-                                                    paddingAngle={2}
-                                                    dataKey="value"
-                                                >
-                                                    {chartData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
-                                                    ))}
-                                                </Pie>
-                                                <RechartsTooltip
-                                                    formatter={(value: number) => formatCurrency(value)}
-                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                                />
-                                                <Legend
-                                                    verticalAlign="bottom"
-                                                    height={36}
-                                                    iconType="circle"
-                                                    wrapperStyle={{ paddingTop: '10px' }}
-                                                    formatter={(value, entry: any) => <span className="text-slate-600 font-medium ml-2 text-xs md:text-sm">{value}</span>}
-                                                />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-
-                                {/* Диаграмма с областями */}
-                                <div className="lg:col-span-7 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-                                    <h3 className="text-base md:text-lg font-bold text-slate-700 mb-3">График погашения</h3>
-                                    <div className="flex-1 min-h-[200px] md:min-h-[220px]">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={areaChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                                <defs>
-                                                    <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
-                                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <XAxis
-                                                    dataKey="year"
-                                                    fontSize={10}
-                                                    tickLine={false}
-                                                    axisLine={false}
-                                                    tick={{ fill: '#94a3b8' }}
-                                                />
-                                                <YAxis
-                                                    fontSize={10}
-                                                    tickFormatter={(val) => (val / 1000000).toFixed(1) + 'м'}
-                                                    tickLine={false}
-                                                    axisLine={false}
-                                                    tick={{ fill: '#94a3b8' }}
-                                                    domain={[0, 'auto']}
-                                                />
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                <RechartsTooltip content={<CustomTooltip />} />
-                                                <Area
-                                                    type="monotone"
-                                                    dataKey="balance"
-                                                    stroke="#10b981"
-                                                    strokeWidth={3}
-                                                    fillOpacity={1}
-                                                    fill="url(#colorBalance)"
-                                                    dot={{ r: 4, fill: "#10b981", strokeWidth: 2, stroke: "#fff" }}
-                                                    activeDot={{ r: 6, strokeWidth: 0 }}
-                                                />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Столбчатая диаграмма */}
-                            <div className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-                                <h3 className="text-base md:text-lg font-bold text-slate-700 mb-1">График платежей (структура)</h3>
-                                <div className="h-[200px] md:h-[240px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={monthlyChartData} margin={{ top: 0, right: 10, left: 0, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="displayDate" minTickGap={30} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                                            <YAxis hide />
-                                            <RechartsTooltip content={<CustomTooltip />} />
-                                            <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                                            {/* Основной долг снизу */}
-                                            <Bar dataKey="principalPart" name="Основной долг" stackId="a" fill="#10b981" />
-                                            {/* Проценты сверху */}
-                                            <Bar dataKey="interestPart" name="Проценты" stackId="a" fill="#f59e0b" />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </div>
                         </div>
-                    ) : viewMode === ViewMode.Object ? (
-                        <div className="flex flex-col h-full p-3 md:p-6 overflow-y-auto">
-                            {/* Карточка объекта */}
-                            <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
-                                <h3 className="text-base md:text-lg font-bold text-slate-700 mb-4">Объект</h3>
-                                <div className="flex flex-col md:flex-row gap-6">
-                                    {/* Планировка */}
-                                    <div className="w-full md:w-1/3 lg:w-1/4 shrink-0">
-                                        <div className="aspect-square bg-slate-100 rounded-xl overflow-hidden border border-slate-200 relative group">
-                                            {propertyInfoToUse.layoutImage || propertyInfoToUse.imageUrl ? (
-                                                <img
-                                                    src={propertyInfoToUse.layoutImage || propertyInfoToUse.imageUrl}
-                                                    alt="Планировка"
-                                                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-slate-400">
-                                                    <LayoutDashboard size={48} className="opacity-20" />
-                                                </div>
-                                            )}
+
+                        {/* Динамический контент */}
+                        {/* Удален отступ p-3 md:p-6 из этого контейнера, чтобы разрешить липкие заголовки во всю ширину в списочном виде */}
+                        <div className={`bg-slate-50/30 md:flex-1 md:flex md:flex-col md:min-h-0 ${viewMode === ViewMode.Summary
+                            ? 'md:overflow-y-auto'
+                            : 'md:overflow-y-auto lg:overflow-hidden'
+                            }`}>
+                            {viewMode === ViewMode.Summary ? (
+                                /* Здесь добавлен отступ для вида сводки */
+                                <div className="flex flex-col gap-4 p-3 md:p-6">
+                                    <div className="grid grid-cols-1 lg:grid-cols-10 gap-4 min-h-[280px]">
+
+                                        {/* Круговая диаграмма */}
+                                        <div className="lg:col-span-3 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                                            <h3 className="text-base md:text-lg font-bold text-slate-700 mb-3">Структура выплат</h3>
+                                            <div className="flex-1 min-h-[200px] md:min-h-[220px]">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
+                                                        <Pie
+                                                            data={chartData}
+                                                            cx="50%"
+                                                            cy="50%"
+                                                            innerRadius={60}
+                                                            outerRadius={80}
+                                                            paddingAngle={2}
+                                                            dataKey="value"
+                                                        >
+                                                            {chartData.map((entry, index) => (
+                                                                <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                                                            ))}
+                                                        </Pie>
+                                                        <RechartsTooltip
+                                                            formatter={(value: number) => formatCurrency(value)}
+                                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                                        />
+                                                        <Legend
+                                                            verticalAlign="bottom"
+                                                            height={36}
+                                                            iconType="circle"
+                                                            wrapperStyle={{ paddingTop: '10px' }}
+                                                            formatter={(value, entry: any) => <span className="text-slate-600 font-medium ml-2 text-xs md:text-sm">{value}</span>}
+                                                        />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </div>
+
+                                        {/* Диаграмма с областями */}
+                                        <div className="lg:col-span-7 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                                            <h3 className="text-base md:text-lg font-bold text-slate-700 mb-3">График погашения</h3>
+                                            <div className="flex-1 min-h-[200px] md:min-h-[220px]">
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <AreaChart data={areaChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                        <defs>
+                                                            <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <XAxis
+                                                            dataKey="year"
+                                                            fontSize={10}
+                                                            tickLine={false}
+                                                            axisLine={false}
+                                                            tick={{ fill: '#94a3b8' }}
+                                                        />
+                                                        <YAxis
+                                                            fontSize={10}
+                                                            tickFormatter={(val) => (val / 1000000).toFixed(1) + 'м'}
+                                                            tickLine={false}
+                                                            axisLine={false}
+                                                            tick={{ fill: '#94a3b8' }}
+                                                            domain={[0, 'auto']}
+                                                        />
+                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                        <RechartsTooltip content={<CustomTooltip />} />
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="balance"
+                                                            stroke="#10b981"
+                                                            strokeWidth={3}
+                                                            fillOpacity={1}
+                                                            fill="url(#colorBalance)"
+                                                            dot={{ r: 4, fill: "#10b981", strokeWidth: 2, stroke: "#fff" }}
+                                                            activeDot={{ r: 6, strokeWidth: 0 }}
+                                                        />
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Информация */}
-                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6 content-start">
-                                        <div className="space-y-1">
-                                            <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Название</div>
-                                            <div className="text-base md:text-lg font-bold text-slate-800">
-                                                {propertyInfoToUse.apartmentName || `${propertyInfoToUse.rooms}-к квартира`}
-                                            </div>
+                                    {/* Столбчатая диаграмма */}
+                                    <div className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                                        <h3 className="text-base md:text-lg font-bold text-slate-700 mb-1">График платежей (структура)</h3>
+                                        <div className="h-[200px] md:h-[240px] w-full">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={monthlyChartData} margin={{ top: 0, right: 10, left: 0, bottom: 5 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                    <XAxis dataKey="displayDate" minTickGap={30} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                                                    <YAxis hide />
+                                                    <RechartsTooltip content={<CustomTooltip />} />
+                                                    <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                                                    {/* Основной долг снизу */}
+                                                    <Bar dataKey="principalPart" name="Основной долг" stackId="a" fill="#10b981" />
+                                                    {/* Проценты сверху */}
+                                                    <Bar dataKey="interestPart" name="Проценты" stackId="a" fill="#f59e0b" />
+                                                </BarChart>
+                                            </ResponsiveContainer>
                                         </div>
-
-                                        <div className="space-y-1">
-                                            <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Адрес</div>
-                                            <div className="text-base font-medium text-slate-700">
-                                                {propertyInfoToUse.address}
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1">
-                                            <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Жилой комплекс</div>
-                                            <div className="text-base font-medium text-emerald-700">
-                                                {propertyInfoToUse.complexName || "—"}
-                                            </div>
-                                        </div>
-
-                                        {propertyInfoToUse.deliveryDeadline && (
-                                            <div className="space-y-1">
-                                                <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Срок сдачи</div>
-                                                <div className="text-base font-bold text-slate-800">
-                                                    {propertyInfoToUse.deliveryDeadline}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1">
-                                                <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Площадь</div>
-                                                <div className="text-base font-bold text-slate-800">
-                                                    {propertyInfoToUse.area}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Этаж</div>
-                                                <div className="text-base font-bold text-slate-800">
-                                                    {propertyInfoToUse.floor}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Комнат</div>
-                                                <div className="text-base font-bold text-slate-800">
-                                                    {propertyInfoToUse.rooms}
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Отделка</div>
-                                                <div className="text-base font-bold text-slate-800">
-                                                    {propertyInfoToUse.finish}
-                                                </div>
-                                            </div>
-
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Информация о менеджере и Результаты расчета ипотеки скрыты по запросу */}
-                        </div>
-                    ) : (
-                        <>
-                            {/* Табличный вид для десктопа (Visible on lg+) */}
-                            {/* Здесь добавлен отступ для обертки таблицы десктопа для сохранения визуальной целостности */}
-                            <div className="hidden lg:flex flex-col h-full p-6">
-                                <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                                    <div className="overflow-auto flex-1">
-                                        <table className="w-full text-sm lg:text-base text-left relative min-w-[600px]">
-                                            <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-                                                <tr>
-                                                    <th className="pl-6 pr-2 py-4 w-16">№</th>
-                                                    <th className="px-6 py-4">Дата</th>
-                                                    <th className="px-6 py-4">Платеж</th>
-                                                    <th className="px-6 py-4">Осн. долг</th>
-                                                    <th className="px-6 py-4">Проценты</th>
-                                                    <th className="px-6 py-4">Остаток</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100">
-                                                {Object.keys(scheduleByYear).sort().map(yearStr => {
-                                                    const year = Number(yearStr);
-                                                    const payments = scheduleByYear[year];
-
-                                                    const totalPaymentYear = payments.reduce((sum, p) => sum + p.payment, 0);
-                                                    const totalPrincipalYear = payments.reduce((sum, p) => sum + p.principalPart, 0);
-                                                    const totalInterestYear = payments.reduce((sum, p) => sum + p.interestPart, 0);
-
-                                                    return (
-                                                        <React.Fragment key={year}>
-                                                            <tr className="bg-slate-100/80">
-                                                                <td colSpan={6} className="px-6 py-3">
-                                                                    <div className="flex items-center justify-between font-bold text-slate-700 gap-1">
-                                                                        <span>{year} год</span>
-                                                                        <div className="flex items-center gap-1 text-base font-normal text-slate-600 bg-white px-4 py-1.5 rounded-full border border-slate-200 shadow-sm">
-                                                                            <span>Выплачено: <span className="font-medium text-slate-800">{formatCurrency(totalPaymentYear)}</span></span>
-                                                                            <span className="text-slate-400">|</span>
-                                                                            <span className="text-slate-500">(Долг: {formatCurrency(totalPrincipalYear)}, %: {formatCurrency(totalInterestYear)})</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                            {payments.map((row) => {
-                                                                const isWeekend = row.paymentDate.getDay() === 0 || row.paymentDate.getDay() === 6;
-                                                                const dayName = row.paymentDate.toLocaleDateString('ru-RU', { weekday: 'short' }).toUpperCase();
-                                                                const dateDisplay = `${formatDate(row.paymentDate)} (${dayName})`;
-
-                                                                return (
-                                                                    <tr key={row.monthIndex} className="hover:bg-slate-50 transition-colors group text-base">
-                                                                        <td className="pl-6 pr-2 py-3 text-slate-400 font-medium">{row.monthIndex}</td>
-                                                                        <td className={`px-6 py-3 font-medium transition-colors ${isWeekend ? 'text-rose-500' : 'text-slate-600 group-hover:text-emerald-700'}`}>
-                                                                            {dateDisplay}
-                                                                        </td>
-                                                                        <td className="px-6 py-3 font-medium text-slate-800">{formatCurrency(row.payment)}</td>
-                                                                        <td className="px-6 py-3 text-emerald-600">{formatCurrency(row.principalPart)}</td>
-                                                                        <td className="px-6 py-3 text-amber-600">{formatCurrency(row.interestPart)}</td>
-                                                                        <td className="px-6 py-3 text-slate-400 font-mono">{formatCurrency(row.remainingBalance)}</td>
-                                                                    </tr>
-                                                                )
-                                                            })}
-                                                        </React.Fragment>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Компактный список для мобильных (< lg) */}
-                            <div className="lg:hidden">
-                                {Object.keys(scheduleByYear).sort().map(yearStr => {
-                                    const year = Number(yearStr);
-                                    const payments = scheduleByYear[year];
-                                    const totalPaymentYear = payments.reduce((sum, p) => sum + p.payment, 0);
-                                    const totalPrincipalYear = payments.reduce((sum, p) => sum + p.principalPart, 0);
-                                    const totalInterestYear = payments.reduce((sum, p) => sum + p.interestPart, 0);
-
-                                    return (
-                                        <div key={year} className="relative">
-                                            {/* Закрепленный заголовок года */}
-                                            <div className="sticky top-[49px] md:top-0 z-10 bg-slate-50 border-y border-slate-200 py-2 px-3 shadow-sm flex flex-col justify-center min-h-[50px]">
-                                                <div className="flex justify-between items-baseline w-full">
-                                                    <span className="font-bold text-slate-800 text-sm">{year} год</span>
-                                                    <span className="font-bold text-slate-800 text-xs">{formatCurrency(totalPaymentYear)}</span>
+                            ) : viewMode === ViewMode.Object ? (
+                                <div className="flex flex-col h-full p-3 md:p-6 overflow-y-auto">
+                                    {/* Карточка объекта */}
+                                    <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
+                                        <h3 className="text-base md:text-lg font-bold text-slate-700 mb-4">Объект</h3>
+                                        <div className="flex flex-col md:flex-row gap-6">
+                                            {/* Планировка */}
+                                            <div className="w-full md:w-1/3 lg:w-1/4 shrink-0">
+                                                <div className="aspect-square bg-slate-100 rounded-xl overflow-hidden border border-slate-200 relative group">
+                                                    {propertyInfoToUse.layoutImage || propertyInfoToUse.imageUrl ? (
+                                                        <img
+                                                            src={propertyInfoToUse.layoutImage || propertyInfoToUse.imageUrl}
+                                                            alt="Планировка"
+                                                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                                            <LayoutDashboard size={48} className="opacity-20" />
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div className="flex justify-between items-center w-full mt-1 text-[10px] text-slate-500">
-                                                    <div className="flex gap-2">
-                                                        <span>Долг: <span className="text-emerald-700">{formatCurrency(totalPrincipalYear)}</span></span>
-                                                        <span>%: <span className="text-amber-700">{formatCurrency(totalInterestYear)}</span></span>
+                                            </div>
+
+                                            {/* Информация */}
+                                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6 content-start">
+                                                <div className="space-y-1">
+                                                    <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Название</div>
+                                                    <div className="text-base md:text-lg font-bold text-slate-800">
+                                                        {propertyInfoToUse.apartmentName || `${propertyInfoToUse.rooms}-к квартира`}
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            <div className="bg-white divide-y divide-slate-100 border-b border-slate-200">
-                                                {payments.map((row) => {
-                                                    const isWeekend = row.paymentDate.getDay() === 0 || row.paymentDate.getDay() === 6;
-                                                    const dateStr = row.paymentDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' });
-                                                    const weekDay = row.paymentDate.toLocaleDateString('ru-RU', { weekday: 'short' }).toUpperCase();
+                                                <div className="space-y-1">
+                                                    <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Адрес</div>
+                                                    <div className="text-base font-medium text-slate-700">
+                                                        {propertyInfoToUse.address}
+                                                    </div>
+                                                </div>
 
-                                                    return (
-                                                        <div key={row.monthIndex} className="px-3 py-2.5">
-                                                            {/* Строка 1: Номер, Дата, Сумма */}
-                                                            <div className="flex justify-between items-center mb-1.5">
-                                                                <div className="flex items-center gap-3">
-                                                                    <span className="text-[10px] text-slate-400 font-medium w-5">#{row.monthIndex}</span>
-                                                                    <div className={`text-sm font-semibold ${isWeekend ? 'text-rose-500' : 'text-slate-700'}`}>
-                                                                        {dateStr} <span className="text-[10px] font-normal opacity-60 ml-0.5">{weekDay}</span>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="text-sm font-bold text-slate-900">{formatCurrency(row.payment)}</div>
-                                                            </div>
+                                                <div className="space-y-1">
+                                                    <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Жилой комплекс</div>
+                                                    <div className="text-base font-medium text-emerald-700">
+                                                        {propertyInfoToUse.complexName || "—"}
+                                                    </div>
+                                                </div>
 
-                                                            {/* Строка 2: Детализация и Остаток */}
-                                                            <div className="flex justify-between items-center text-[10px] pl-8">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100/50">{formatCurrency(row.principalPart)}</span>
-                                                                    <span className="text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100/50">{formatCurrency(row.interestPart)}</span>
-                                                                </div>
-                                                                <div className="text-slate-400 font-mono">Ост: {formatCurrency(row.remainingBalance)}</div>
-                                                            </div>
+                                                {propertyInfoToUse.deliveryDeadline && (
+                                                    <div className="space-y-1">
+                                                        <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Срок сдачи</div>
+                                                        <div className="text-base font-bold text-slate-800">
+                                                            {propertyInfoToUse.deliveryDeadline}
                                                         </div>
-                                                    );
-                                                })}
+                                                    </div>
+                                                )}
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1">
+                                                        <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Площадь</div>
+                                                        <div className="text-base font-bold text-slate-800">
+                                                            {propertyInfoToUse.area}
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Этаж</div>
+                                                        <div className="text-base font-bold text-slate-800">
+                                                            {propertyInfoToUse.floor}
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Комнат</div>
+                                                        <div className="text-base font-bold text-slate-800">
+                                                            {propertyInfoToUse.rooms}
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <div className="text-xs text-slate-500 font-medium uppercase tracking-wider">Отделка</div>
+                                                        <div className="text-base font-bold text-slate-800">
+                                                            {propertyInfoToUse.finish}
+                                                        </div>
+                                                    </div>
+
+                                                </div>
                                             </div>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </>
-                    )}
-                </div>
-                </>
+                                    </div>
+
+                                    {/* Информация о менеджере и Результаты расчета ипотеки скрыты по запросу */}
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Табличный вид для десктопа (Visible on lg+) */}
+                                    {/* Здесь добавлен отступ для обертки таблицы десктопа для сохранения визуальной целостности */}
+                                    <div className="hidden lg:flex flex-col h-full p-6">
+                                        <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                                            <div className="overflow-auto flex-1">
+                                                <table className="w-full text-sm lg:text-base text-left relative min-w-[600px]">
+                                                    <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+                                                        <tr>
+                                                            <th className="pl-6 pr-2 py-4 w-16">№</th>
+                                                            <th className="px-6 py-4">Дата</th>
+                                                            <th className="px-6 py-4">Платеж</th>
+                                                            <th className="px-6 py-4">Осн. долг</th>
+                                                            <th className="px-6 py-4">Проценты</th>
+                                                            <th className="px-6 py-4">Остаток</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {Object.keys(scheduleByYear).sort().map(yearStr => {
+                                                            const year = Number(yearStr);
+                                                            const payments = scheduleByYear[year];
+
+                                                            const totalPaymentYear = payments.reduce((sum, p) => sum + p.payment, 0);
+                                                            const totalPrincipalYear = payments.reduce((sum, p) => sum + p.principalPart, 0);
+                                                            const totalInterestYear = payments.reduce((sum, p) => sum + p.interestPart, 0);
+
+                                                            return (
+                                                                <React.Fragment key={year}>
+                                                                    <tr className="bg-slate-100/80">
+                                                                        <td colSpan={6} className="px-6 py-3">
+                                                                            <div className="flex items-center justify-between font-bold text-slate-700 gap-1">
+                                                                                <span>{year} год</span>
+                                                                                <div className="flex items-center gap-1 text-base font-normal text-slate-600 bg-white px-4 py-1.5 rounded-full border border-slate-200 shadow-sm">
+                                                                                    <span>Выплачено: <span className="font-medium text-slate-800">{formatCurrency(totalPaymentYear)}</span></span>
+                                                                                    <span className="text-slate-400">|</span>
+                                                                                    <span className="text-slate-500">(Долг: {formatCurrency(totalPrincipalYear)}, %: {formatCurrency(totalInterestYear)})</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                    {payments.map((row) => {
+                                                                        const isWeekend = row.paymentDate.getDay() === 0 || row.paymentDate.getDay() === 6;
+                                                                        const dayName = row.paymentDate.toLocaleDateString('ru-RU', { weekday: 'short' }).toUpperCase();
+                                                                        const dateDisplay = `${formatDate(row.paymentDate)} (${dayName})`;
+
+                                                                        return (
+                                                                            <tr key={row.monthIndex} className="hover:bg-slate-50 transition-colors group text-base">
+                                                                                <td className="pl-6 pr-2 py-3 text-slate-400 font-medium">{row.monthIndex}</td>
+                                                                                <td className={`px-6 py-3 font-medium transition-colors ${isWeekend ? 'text-rose-500' : 'text-slate-600 group-hover:text-emerald-700'}`}>
+                                                                                    {dateDisplay}
+                                                                                </td>
+                                                                                <td className="px-6 py-3 font-medium text-slate-800">{formatCurrency(row.payment)}</td>
+                                                                                <td className="px-6 py-3 text-emerald-600">{formatCurrency(row.principalPart)}</td>
+                                                                                <td className="px-6 py-3 text-amber-600">{formatCurrency(row.interestPart)}</td>
+                                                                                <td className="px-6 py-3 text-slate-400 font-mono">{formatCurrency(row.remainingBalance)}</td>
+                                                                            </tr>
+                                                                        )
+                                                                    })}
+                                                                </React.Fragment>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Компактный список для мобильных (< lg) */}
+                                    <div className="lg:hidden">
+                                        {Object.keys(scheduleByYear).sort().map(yearStr => {
+                                            const year = Number(yearStr);
+                                            const payments = scheduleByYear[year];
+                                            const totalPaymentYear = payments.reduce((sum, p) => sum + p.payment, 0);
+                                            const totalPrincipalYear = payments.reduce((sum, p) => sum + p.principalPart, 0);
+                                            const totalInterestYear = payments.reduce((sum, p) => sum + p.interestPart, 0);
+
+                                            return (
+                                                <div key={year} className="relative">
+                                                    {/* Закрепленный заголовок года */}
+                                                    <div className="sticky top-[49px] md:top-0 z-10 bg-slate-50 border-y border-slate-200 py-2 px-3 shadow-sm flex flex-col justify-center min-h-[50px]">
+                                                        <div className="flex justify-between items-baseline w-full">
+                                                            <span className="font-bold text-slate-800 text-sm">{year} год</span>
+                                                            <span className="font-bold text-slate-800 text-xs">{formatCurrency(totalPaymentYear)}</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center w-full mt-1 text-[10px] text-slate-500">
+                                                            <div className="flex gap-2">
+                                                                <span>Долг: <span className="text-emerald-700">{formatCurrency(totalPrincipalYear)}</span></span>
+                                                                <span>%: <span className="text-amber-700">{formatCurrency(totalInterestYear)}</span></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="bg-white divide-y divide-slate-100 border-b border-slate-200">
+                                                        {payments.map((row) => {
+                                                            const isWeekend = row.paymentDate.getDay() === 0 || row.paymentDate.getDay() === 6;
+                                                            const dateStr = row.paymentDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                                                            const weekDay = row.paymentDate.toLocaleDateString('ru-RU', { weekday: 'short' }).toUpperCase();
+
+                                                            return (
+                                                                <div key={row.monthIndex} className="px-3 py-2.5">
+                                                                    {/* Строка 1: Номер, Дата, Сумма */}
+                                                                    <div className="flex justify-between items-center mb-1.5">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className="text-[10px] text-slate-400 font-medium w-5">#{row.monthIndex}</span>
+                                                                            <div className={`text-sm font-semibold ${isWeekend ? 'text-rose-500' : 'text-slate-700'}`}>
+                                                                                {dateStr} <span className="text-[10px] font-normal opacity-60 ml-0.5">{weekDay}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="text-sm font-bold text-slate-900">{formatCurrency(row.payment)}</div>
+                                                                    </div>
+
+                                                                    {/* Строка 2: Детализация и Остаток */}
+                                                                    <div className="flex justify-between items-center text-[10px] pl-8">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100/50">{formatCurrency(row.principalPart)}</span>
+                                                                            <span className="text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100/50">{formatCurrency(row.interestPart)}</span>
+                                                                        </div>
+                                                                        <div className="text-slate-400 font-mono">Ост: {formatCurrency(row.remainingBalance)}</div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </>
                 )}
             </div>
             {/* Модальное окно подтверждения закрытия */}
