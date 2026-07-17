@@ -73,6 +73,26 @@ const OFFER_TERM_RULES: Record<string, OfferTermRule> = {
     "2d8fbede-4eb0-11f1-8278-ac1f6bd9ba5d": { program: 'family', exactDownPayment: 10.5, subsidy: true },
 };
 
+const formatPeriod = (years: number) => {
+    const totalMonths = Math.round(years * 12);
+    const y = Math.floor(totalMonths / 12);
+    const m = totalMonths % 12;
+    let res = `(${totalMonths} мес) `;
+    if (y > 0) res += `${y} г. `;
+    if (m > 0) res += `${m} мес.`;
+    return res.trim();
+};
+
+const formatYearsAndMonths = (years: number) => {
+    const totalMonths = Math.round(years * 12);
+    const y = Math.floor(totalMonths / 12);
+    const m = totalMonths % 12;
+    let res = "";
+    if (y > 0) res += `${y} г. `;
+    if (m > 0) res += `${m} мес.`;
+    return res.trim();
+};
+
 export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose, propertyInfo: externalPropertyInfo }) => {
     // Используем цену из propertyInfo, если она передана
     const initialPropertyValue = externalPropertyInfo?.price
@@ -998,20 +1018,20 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                 <CalendarDays size={16} className="text-slate-400" />
                                 Срок кредита
                             </span>
-                            <span className="text-lg font-bold text-slate-900">{input.years} лет</span>
+                            <span className="text-lg font-bold text-slate-900">{formatPeriod(input.years)}</span>
                         </div>
                         <input
                             type="range"
                             min="1"
-                            max="30"
+                            max="360"
                             step="1"
-                            value={input.years}
-                            onChange={(e) => setInput({ ...input, years: parseInt(e.target.value) })}
+                            value={Math.round(input.years * 12)}
+                            onChange={(e) => setInput({ ...input, years: parseInt(e.target.value) / 12 })}
                             className="w-full h-2 bg-slate-200 hover:bg-slate-300 rounded-lg appearance-none cursor-pointer accent-emerald-600 transition-colors focus:outline-none"
                         />
                         <div className="flex justify-between text-xs text-slate-400 mt-0">
-                            <span>1 год</span>
-                            <span>30 лет</span>
+                            <span>1 мес.</span>
+                            <span>360 мес.</span>
                         </div>
                         {/* Кнопки быстрого выбора срока */}
                         <div className="flex gap-2 mt-3">
@@ -1019,7 +1039,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                 <button
                                     key={years}
                                     onClick={() => setInput({ ...input, years })}
-                                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${input.years === years
+                                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${Math.round(input.years * 12) === years * 12
                                         ? 'bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm'
                                         : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200'
                                         }`}
@@ -1365,7 +1385,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                         {/* Срок */}
                                         <div className="p-2 md:p-0">
                                             <div className="text-[10px] md:text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Срок</div>
-                                            <div className="font-semibold text-slate-700 text-sm md:text-base">{termMonths} мес. <span className="text-slate-400 font-normal">({input.years} лет)</span></div>
+                                            <div className="font-semibold text-slate-700 text-sm md:text-base">{termMonths} мес. <span className="text-slate-400 font-normal">({formatYearsAndMonths(input.years)})</span></div>
                                         </div>
 
                                         {/* Дата первого платежа */}

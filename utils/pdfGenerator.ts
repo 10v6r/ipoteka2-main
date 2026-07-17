@@ -99,6 +99,18 @@ const stripHtml = (html: string): string => {
     return text;
 };
 
+const BG_SOFT_BLUE: [number, number, number] = [238, 245, 255]; // Светлый фон плашек в итогах
+
+const formatPeriod = (years: number) => {
+    const totalMonths = Math.round(years * 12);
+    const y = Math.floor(totalMonths / 12);
+    const m = totalMonths % 12;
+    let res = `(${totalMonths} мес) `;
+    if (y > 0) res += `${y} г. `;
+    if (m > 0) res += `${m} мес.`;
+    return res.trim();
+};
+
 export const generateMortgagePDF = async (
     input: CalculationInput,
     result: CalculationResult,
@@ -504,7 +516,7 @@ const generatePdfContent = (
     doc.text(formatCurrency(result.monthlyPayment), col2X, rowStart + 6);
 
     // Остальные итоги
-    drawResultRow("Срок кредита", `${input.years} лет`, col2X, rowStart + rowGap + 4);
+    drawResultRow("Срок кредита", formatPeriod(input.years), col2X, rowStart + rowGap + 4);
     drawResultRow("Процентная ставка", `${input.interestRate}%`, col2X, rowStart + (rowGap * 2) + 4);
     //drawResultRow("Начисленные проценты", formatCurrency(result.totalInterest), col2X, rowStart + rowGap + 4);
     //drawResultRow("Общая сумма выплат", formatCurrency(result.totalPayment), col2X, rowStart + (rowGap * 2) + 4);
