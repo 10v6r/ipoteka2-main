@@ -1,0 +1,1219 @@
+[
+  {
+    "uid": "bd94bdcf-a5ed-11f0-8251-ac1f6bd9ba5d",
+    "items": [
+      {
+        "offer": {
+          "uid": "9213c6a8-c237-11f1-8290-ac1f6bd9ba5d",
+          "name": "Полная оплата (без ипотеки или СВО -Скидка 5%)"
+        },
+        "subsidy": false,
+        "offerterms": [
+          {
+            "uid": "3850ff27-4ea9-11f1-8278-ac1f6bd9ba5d",
+            "name": "Полная оплата - минимальная цена"
+          }
+        ],
+        "bankoffer": {
+          "uid": "874fe116-b24d-11f1-828d-ac1f6bd9ba5d",
+          "name": "Полная оплата, скидка 5%"
+        },
+        "projectfinancing": false,
+        "rates": [],
+        "terms": [],
+        "price": 8322741,
+        "offerprice": 7906604,
+        "relatevepricechange": -5
+      },
+      {
+        "offer": {
+          "uid": "0ae7b88c-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ без субсидии БУ (Скидка 3%)"
+        },
+        "subsidy": false,
+        "offerterms": [
+          {
+            "uid": "69b35f2a-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Базовая ставка (Свой ПВ без субсидии)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "71113403-3ec7-11f1-8274-ac1f6bd9ba5d",
+          "name": "Сбер БУ 19,2-20,7% весь срок без субсидии"
+        },
+        "bank": {
+          "uid": "d3c2c1bd-809e-11ea-abca-74d02b969dd9",
+          "name": "ПАО Сбербанк России"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 360,
+            "rate": 19.2,
+            "comment": "ЗП проект +Ипотека Плюс"
+          },
+          {
+            "tomonths": 360,
+            "rate": 19.7,
+            "comment": "ЗП проект"
+          },
+          {
+            "tomonths": 360,
+            "rate": 20.2,
+            "comment": "не ЗП проект +Ипотека Плюс"
+          },
+          {
+            "tomonths": 360,
+            "rate": 20.7,
+            "comment": "не ЗП проект"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8073059,
+        "relatevepricechange": -3
+      },
+      {
+        "offer": {
+          "uid": "0ae7b88c-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ без субсидии БУ (Скидка 3%)"
+        },
+        "subsidy": false,
+        "offerterms": [
+          {
+            "uid": "69b35f2a-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Базовая ставка (Свой ПВ без субсидии)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "48ec5a4b-15e7-11f1-8264-ac1f6bd9ba5d",
+          "name": "ВТБ БУ 18,0-19,4% весь срок без субсидии"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 360,
+            "rate": 19.4,
+            "comment": "база"
+          },
+          {
+            "tomonths": 360,
+            "rate": 19,
+            "comment": "зп проект"
+          },
+          {
+            "tomonths": 360,
+            "rate": 18.9,
+            "comment": "пв от 50%"
+          },
+          {
+            "tomonths": 360,
+            "rate": 18.9,
+            "comment": "кредит от 6 млн"
+          },
+          {
+            "tomonths": 360,
+            "rate": 18.5,
+            "comment": "зп проект и пв от 50%"
+          },
+          {
+            "tomonths": 360,
+            "rate": 18.5,
+            "comment": "зп проект и сумма от 6,0 млн"
+          },
+          {
+            "tomonths": 360,
+            "rate": 18.4,
+            "comment": "не зп, пв от 50% и сумма от 6,0 млн"
+          },
+          {
+            "tomonths": 360,
+            "rate": 18,
+            "comment": "зп проект, пв от 50% и сумма от 6,0 млн"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          },
+          {
+            "term": "Зарплатный проект"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8073059,
+        "relatevepricechange": -3
+      },
+      {
+        "offer": {
+          "uid": "470caebc-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ без субсидии СИ (Скидка 3%)"
+        },
+        "subsidy": false,
+        "offerterms": [
+          {
+            "uid": "d080f77c-4eaf-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ без субсидии)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "9e4da2a5-393d-11f1-8274-ac1f6bd9ba5d",
+          "name": "ВТБ СИ 2-10% весь срок без субсидии ПВ 40%"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 360,
+            "rate": 10,
+            "comment": "лимит ипотеки 6,0 млн 1 ребенок до 7 лет"
+          },
+          {
+            "tomonths": 360,
+            "rate": 8,
+            "comment": "лимит ипотеки 8,0 млн. 2 ребенка (один до 7 лет)"
+          },
+          {
+            "tomonths": 360,
+            "rate": 6,
+            "comment": "лимит ипотеки 10,0 млн. 3 ребенка (один до 7 лет)"
+          },
+          {
+            "tomonths": 360,
+            "rate": 4,
+            "comment": "лимит ипотеки 10,0 млн. 4 ребенка (один до 7 лет)"
+          },
+          {
+            "tomonths": 360,
+            "rate": 2,
+            "comment": "лимит ипотеки 10,0 млн 5 и более дететй (один до 7 лет)"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8073059,
+        "relatevepricechange": -3
+      },
+      {
+        "offer": {
+          "uid": "470caebc-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ без субсидии СИ (Скидка 3%)"
+        },
+        "subsidy": false,
+        "offerterms": [
+          {
+            "uid": "d080f77c-4eaf-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ без субсидии)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "7887e599-0723-11f1-825d-ac1f6bd9ba5d",
+          "name": "Сбер СИ 2-10% до 15 лет без субсидии"
+        },
+        "bank": {
+          "uid": "d3c2c1bd-809e-11ea-abca-74d02b969dd9",
+          "name": "ПАО Сбербанк России"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 180,
+            "rate": 10,
+            "comment": "лимит ипотеки 6,0 млн 1 ребенок до 7 лет"
+          },
+          {
+            "tomonths": 180,
+            "rate": 8,
+            "comment": "лимит ипотеки 8,0 млн. 2 ребенка (один до 7 лет)"
+          },
+          {
+            "tomonths": 180,
+            "rate": 6,
+            "comment": "лимит ипотеки 10,0 млн. 3 ребенка (один до 7 лет)"
+          },
+          {
+            "tomonths": 180,
+            "rate": 4,
+            "comment": "лимит ипотеки 10,0 млн. 4 ребенка (один до 7 лет)"
+          },
+          {
+            "tomonths": 180,
+            "rate": 2,
+            "comment": "лимит ипотеки 10,0 млн 5 и более дететй (один до 7 лет)"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8073059,
+        "relatevepricechange": -3
+      },
+      {
+        "offer": {
+          "uid": "470caebc-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ без субсидии СИ (Скидка 3%)"
+        },
+        "subsidy": false,
+        "offerterms": [
+          {
+            "uid": "d080f77c-4eaf-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ без субсидии)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "0b0a5929-c9de-11f1-8290-ac1f6bd9ba5d",
+          "name": "Альфа СИ 8-10% до 15 лет без субсидии"
+        },
+        "bank": {
+          "uid": "16ea111d-c4d2-11e9-aba3-74d02b969dd9",
+          "name": "АО «Альфа-Банк»"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 180,
+            "rate": 10,
+            "comment": "лимит ипотеки 6,0 млн 1 ребенок до 7 лет"
+          },
+          {
+            "tomonths": 180,
+            "rate": 8,
+            "comment": "лимит ипотеки 8,0 млн. 2 ребенка (один до 7 лет)"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8073059,
+        "relatevepricechange": -3
+      },
+      {
+        "offer": {
+          "uid": "8f20b891-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией БУ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "82d0cbec-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Базовая ставка (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "d2da4c4c-7ac3-11f1-8287-ac1f6bd9ba5d",
+          "name": "ВТБ БУ 14,75-15,15% весь срок с субсидией"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 360,
+            "rate": 14.75,
+            "comment": "субсидированная ставка ставка при уловияии страхования жизни, з/п проект 19,4-0,4-4,25"
+          },
+          {
+            "tomonths": 360,
+            "rate": 15.15,
+            "comment": "субсидированная ставка ставка при уловияии страхования жизни, не з/п проект 19,4-4,25=15,15"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          },
+          {
+            "term": "Зарплатный проект"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "8f20b891-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией БУ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "82d0cbec-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Базовая ставка (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "a7626da5-c226-11f1-8290-ac1f6bd9ba5d",
+          "name": "Сбер БУ 13,9% весь срок с субсидией"
+        },
+        "bank": {
+          "uid": "d3c2c1bd-809e-11ea-abca-74d02b969dd9",
+          "name": "ПАО Сбербанк России"
+        },
+        "projectfinancing": true,
+        "rates": [
+          {
+            "tomonths": 360,
+            "rate": 13.9,
+            "comment": "субсидированая ставка уровень лояльности 2,3"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "8f20b891-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией БУ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "82d0cbec-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Базовая ставка (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "f8485e56-3f87-11f1-8274-ac1f6bd9ba5d",
+          "name": "Альфа БУ 12,49% от 3 до 10 лет с субсидией"
+        },
+        "bank": {
+          "uid": "16ea111d-c4d2-11e9-aba3-74d02b969dd9",
+          "name": "АО «Альфа-Банк»"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "frommonths": 36,
+            "tomonths": 120,
+            "rate": 12.49,
+            "comment": "субсидированная ставка, срок кредита до 10 лет"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +0,7"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "8f20b891-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией БУ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "82d0cbec-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Базовая ставка (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "38245dd3-c9dd-11f1-8290-ac1f6bd9ba5d",
+          "name": "Альфа БУ 13,89% от 11 до 15 лет с субсидией"
+        },
+        "bank": {
+          "uid": "16ea111d-c4d2-11e9-aba3-74d02b969dd9",
+          "name": "АО «Альфа-Банк»"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "frommonths": 132,
+            "tomonths": 180,
+            "rate": 13.89,
+            "comment": "субсидированная ставка, срок кредита от 11 до 15  лет"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +0,7"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "e5c9e057-0bdd-11f1-8262-ac1f6bd9ba5d",
+          "name": "ВТБ СИ 1 ребенок 8,1% 15 лет субсидия"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 182,
+            "rate": 8.1,
+            "comment": "1 ребенок 8,1% 15 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "962a96e7-0bde-11f1-8262-ac1f6bd9ba5d",
+          "name": "ВТБ СИ 1 ребенок 8,5% 30 лет субсидия"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "frommonths": 183,
+            "tomonths": 362,
+            "rate": 8.5,
+            "comment": "1 ребенок 8,5% 30 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "d85e059c-0bb1-11f1-8262-ac1f6bd9ba5d",
+          "name": "ВТБ СИ 2е детей 6,2% 15 лет субсидия"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 182,
+            "rate": 6.2,
+            "comment": "2е детей 6,2% 15 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "951c72c6-13db-11f1-8264-ac1f6bd9ba5d",
+          "name": "ВТБ СИ 2е детей 6,7% 30 лет субсидия"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "frommonths": 183,
+            "tomonths": 362,
+            "rate": 6.7,
+            "comment": "2е детей 6,7% 30 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "25552893-13db-11f1-8264-ac1f6bd9ba5d",
+          "name": "ВТБ СИ 3е детей 5,5% 15 лет субсидия"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 182,
+            "rate": 5.5,
+            "comment": "3е детей 5,5% 15 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "fb2f60eb-13da-11f1-8264-ac1f6bd9ba5d",
+          "name": "ВТБ СИ 3е детей 5,5% 30 лет субсидия"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "frommonths": 183,
+            "tomonths": 362,
+            "rate": 5.5,
+            "comment": "3е детей 5,5% 30 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "ef050a09-0bb0-11f1-8262-ac1f6bd9ba5d",
+          "name": "ВТБ СИ 4о детей 3,5% 15 лет субсидия"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 182,
+            "rate": 3.5,
+            "comment": "4о детей 3,5% 15 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "e2f77ec8-13da-11f1-8264-ac1f6bd9ba5d",
+          "name": "ВТБ СИ 4о детей 3,5% 30 лет субсидия"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "frommonths": 183,
+            "tomonths": 362,
+            "rate": 3.5,
+            "comment": "4о детей 3,5% 30 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "64dae474-0baa-11f1-8262-ac1f6bd9ba5d",
+          "name": "ВТБ СИ 5о детей 1,5% 15 лет субсидия"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 182,
+            "rate": 1.5,
+            "comment": "5о детей 3% 30 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "f865a22e-0bb1-11f1-8262-ac1f6bd9ba5d",
+          "name": "ВТБ СИ 5о детей 1,5% 30 лет субсидия"
+        },
+        "bank": {
+          "uid": "96b95a8d-0e2e-11e7-ab33-74d02b969dd9",
+          "name": "Банк ВТБ (ПАО)"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "frommonths": 182,
+            "tomonths": 362,
+            "rate": 1.5,
+            "comment": "5о детей 1,5% 30 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "eeba7fbc-2c43-11f1-826e-ac1f6bd9ba5d",
+          "name": "Совок СИ 1 ребенок 8,0% 15 лет субсидия"
+        },
+        "bank": {
+          "uid": "ff980434-5ea7-11e8-ab47-74d02b969dd9",
+          "name": "ПАО \"Совкомбанк\""
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 180,
+            "rate": 8,
+            "comment": "1 ребенок 8,0% 15 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "dd679edf-15ea-11f1-8264-ac1f6bd9ba5d",
+          "name": "Совок СИ 1 ребенок 8,5% 30 лет субсидия"
+        },
+        "bank": {
+          "uid": "ff980434-5ea7-11e8-ab47-74d02b969dd9",
+          "name": "ПАО \"Совкомбанк\""
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 360,
+            "rate": 8.5,
+            "comment": "1 ребенок 8,5% 30 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "3a2453f3-322b-11f1-8271-ac1f6bd9ba5d",
+          "name": "Совок СИ 2е детей 6% 15 лет субсидия"
+        },
+        "bank": {
+          "uid": "ff980434-5ea7-11e8-ab47-74d02b969dd9",
+          "name": "ПАО \"Совкомбанк\""
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 180,
+            "rate": 6,
+            "comment": "2е детей 6% 15 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "4454f7ae-0bb0-11f1-8262-ac1f6bd9ba5d",
+          "name": "Совок СИ 2е детей 7% 30 лет субсидия"
+        },
+        "bank": {
+          "uid": "ff980434-5ea7-11e8-ab47-74d02b969dd9",
+          "name": "ПАО \"Совкомбанк\""
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 360,
+            "rate": 7,
+            "comment": "субсидированая ставка СИ 2е дететй "
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "16082643-0bae-11f1-8262-ac1f6bd9ba5d",
+          "name": "Совок СИ 3е детей 4% 15 лет субсидия"
+        },
+        "bank": {
+          "uid": "ff980434-5ea7-11e8-ab47-74d02b969dd9",
+          "name": "ПАО \"Совкомбанк\""
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 180,
+            "rate": 4,
+            "comment": "3е детей 4% 15 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "a9fd45b2-0722-11f1-825d-ac1f6bd9ba5d",
+          "name": "Совок СИ 3е детей 5% 30 лет субсидия"
+        },
+        "bank": {
+          "uid": "ff980434-5ea7-11e8-ab47-74d02b969dd9",
+          "name": "ПАО \"Совкомбанк\""
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 360,
+            "rate": 5,
+            "comment": "3е детей 6% 30 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "691f0cd8-0bb0-11f1-8262-ac1f6bd9ba5d",
+          "name": "Совок СИ 4о детей 2% 15 лет субсидия"
+        },
+        "bank": {
+          "uid": "ff980434-5ea7-11e8-ab47-74d02b969dd9",
+          "name": "ПАО \"Совкомбанк\""
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 180,
+            "rate": 2,
+            "comment": "субсидированая ставка"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "55cb7c08-3d80-11f1-8274-ac1f6bd9ba5d",
+          "name": "Совок СИ 4о детей 3% 30 лет субсидия"
+        },
+        "bank": {
+          "uid": "ff980434-5ea7-11e8-ab47-74d02b969dd9",
+          "name": "ПАО \"Совкомбанк\""
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 360,
+            "rate": 3,
+            "comment": "4о детей 3% 30 лет субсидия"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "e919e76f-c9de-11f1-8290-ac1f6bd9ba5d",
+          "name": "Альфа СИ 8% до 15 лет с субсидией 1 ребенок до 7 лет"
+        },
+        "bank": {
+          "uid": "16ea111d-c4d2-11e9-aba3-74d02b969dd9",
+          "name": "АО «Альфа-Банк»"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 180,
+            "rate": 8,
+            "comment": "лимит ипотеки 6,0 млн 1 ребенок до 7 лет"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      },
+      {
+        "offer": {
+          "uid": "b37af41b-c238-11f1-8290-ac1f6bd9ba5d",
+          "name": "Свой ПВ с субсидией СИ (Наценка 5%)"
+        },
+        "subsidy": true,
+        "offerterms": [
+          {
+            "uid": "25c30229-4eb0-11f1-8278-ac1f6bd9ba5d",
+            "name": "Семейная ипотека (Свой ПВ с субсидией)"
+          }
+        ],
+        "bankoffer": {
+          "uid": "51fa0ccc-c9df-11f1-8290-ac1f6bd9ba5d",
+          "name": "Альфа СИ 6,9% до 15 лет с субсидией 2 ребенка один до 7 лет"
+        },
+        "bank": {
+          "uid": "16ea111d-c4d2-11e9-aba3-74d02b969dd9",
+          "name": "АО «Альфа-Банк»"
+        },
+        "projectfinancing": false,
+        "rates": [
+          {
+            "tomonths": 180,
+            "rate": 6.9,
+            "comment": "лимит ипотеки 8,0 млн 2 ребенока один до 7 лет"
+          }
+        ],
+        "terms": [
+          {
+            "term": "Страхование жизни +1%"
+          }
+        ],
+        "price": 8322741,
+        "offerprice": 8738878,
+        "relatevepricechange": 5
+      }
+    ]
+  }
+]
+Для просмотра результатов расчета — выберете/укажите % ставку
+
+Объект

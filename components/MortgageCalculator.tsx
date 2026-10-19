@@ -496,9 +496,10 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
 
                     if (rule.program && rule.program !== mortgageType) return false;
 
-                    if (rule.subsidy !== undefined) {
-                        const ruleSubsidyMatchesCheckbox = hasSubsidy ? rule.subsidy === true : rule.subsidy === false;
-                        if (!ruleSubsidyMatchesCheckbox) return false;
+                    const offerSubsidy = typeof o.subsidy === 'boolean' ? o.subsidy : rule.subsidy;
+                    if (offerSubsidy !== undefined) {
+                        const matchesCheckbox = hasSubsidy ? offerSubsidy === true : offerSubsidy === false;
+                        if (!matchesCheckbox) return false;
                     }
 
                     if (rule.exactDownPayment !== undefined) {
@@ -530,18 +531,18 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         return finalOffers.sort((a, b) => parseFloat(b.rate) - parseFloat(a.rate));
     }, [propertyInfoToUse?.extraData, hasSubsidy, input.years, mortgageType, input.downPayment, input.propertyValue]);
 
-    // Находим минимальную цену из текущих предложений
+    // Находим измененную цену из текущих предложений (с минимальной ценой, если их несколько)
     const minOfferPrice = useMemo(() => {
         if (!apiOffers || apiOffers.length === 0) return undefined;
-        let min: number | undefined = undefined;
+        let selectedPrice: number | undefined = undefined;
         for (const offer of apiOffers) {
             if (offer.offerprice !== undefined) {
-                if (min === undefined || offer.offerprice < min) {
-                    min = offer.offerprice;
+                if (selectedPrice === undefined || offer.offerprice < selectedPrice) {
+                    selectedPrice = offer.offerprice;
                 }
             }
         }
-        return min;
+        return selectedPrice;
     }, [apiOffers]);
 
     // Расчет процента первоначального взноса
@@ -551,7 +552,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     }, [input.downPayment, input.propertyValue]);
 
     const effectivePrice = useMemo(() => {
-        return (minOfferPrice !== undefined && minOfferPrice < input.propertyValue)
+        return (minOfferPrice !== undefined && minOfferPrice !== input.propertyValue)
             ? minOfferPrice
             : input.propertyValue;
     }, [minOfferPrice, input.propertyValue]);
@@ -873,16 +874,21 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                             <span className="flex items-center gap-2">
                                 <Building2 size={16} className="text-slate-400" />
                                 Стоимость недвижимости
-                                {/* Индикатор скидки — показываем при наличии сниженной цены */}
-                                {minOfferPrice !== undefined && minOfferPrice < input.propertyValue && (
+                                {/* Индикатор изменения стоимости — показываем при наличии измененной цены */}
+                                {minOfferPrice !== undefined && minOfferPrice !== input.propertyValue && (
                                     <span className="relative group/discount inline-flex">
-                                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 cursor-help transition-colors group-hover/discount:bg-emerald-200">
+                                        <span className={`flex items-center justify-center w-5 h-5 rounded-full cursor-help transition-colors ${minOfferPrice < input.propertyValue
+                                            ? 'bg-emerald-100 text-emerald-600 group-hover/discount:bg-emerald-200'
+                                            : 'bg-amber-100 text-amber-700 group-hover/discount:bg-amber-200'
+                                            }`}>
                                             <Percent size={11} strokeWidth={2.5} />
                                         </span>
                                         {/* Тултип при наведении */}
-                                        <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-1.5 bg-slate-800 text-white text-[11px] font-medium rounded-lg shadow-lg whitespace-nowrap opacity-0 pointer-events-none group-hover/discount:opacity-100 transition-opacity duration-200 z-50">
-                                            Стоимость изменена согласно выбранным условиям
-                                            <span className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-slate-800"></span>
+                                        <span className="absolute left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 bottom-full mb-2 w-64 max-w-[280px] p-2.5 bg-slate-800 text-white text-[11px] font-normal leading-snug rounded-xl shadow-xl opacity-0 pointer-events-none group-hover/discount:opacity-100 transition-opacity duration-200 z-50 text-center sm:text-left">
+                                            {minOfferPrice < input.propertyValue
+                                                ? 'Стоимость снижена согласно выбранным условиям'
+                                                : 'Стоимость увеличена согласно выбранным условиям (субсидия)'}
+                                            <span className="absolute left-1/2 -translate-x-1/2 sm:left-2.5 sm:translate-x-0 top-full w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-slate-800"></span>
                                         </span>
                                     </span>
                                 )}
