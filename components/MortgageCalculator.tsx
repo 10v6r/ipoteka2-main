@@ -10,7 +10,7 @@ import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid,
     BarChart, Bar
 } from 'recharts';
-import { Download, Table, PieChart as PieIcon, X, Calendar, HelpCircle, Loader2, ChevronRight, LayoutDashboard, Settings2, Building2, Wallet, CalendarDays, Percent, Info, PartyPopper } from 'lucide-react';
+import { Download, Table, PieChart as PieIcon, X, Calendar, HelpCircle, Loader2, ChevronRight, LayoutDashboard, Settings2, Building2, Wallet, CalendarDays, Percent, Info, PartyPopper, Check, ArrowRight, Search, Sparkles } from 'lucide-react';
 
 interface MortgageCalculatorProps {
     onClose: () => void;
@@ -24,6 +24,7 @@ interface TabCalculation {
     mortgageType: 'base' | 'family'; // Тип ипотеки
     hasSubsidy: boolean; // Есть ли субсидия
     rateInputValue: string; // Введенное строковое значение ставки
+    selectedOfferId?: string; // ID явно выбранного оффера
 }
 
 // Функция для парсинга цены из строки (убирает пробелы и преобразует в число)
@@ -33,6 +34,54 @@ const parsePrice = (priceString?: string): number => {
     const cleaned = priceString.replace(/\s+/g, '');
     const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? 5000000 : parsed;
+};
+
+export interface DetailedOffer {
+    id: string;
+    rate: string;
+    rateNum: number;
+    comment: string;
+    bankName: string;
+    bankOfferName?: string;
+    price?: number;
+    offerprice?: number;
+    relativePriceChange?: number;
+    frommonths?: number;
+    tomonths?: number;
+    subsidy: boolean;
+    offerUid?: string;
+    offerName?: string;
+    offertermUid?: string;
+    offertermName?: string;
+    program: 'base' | 'family';
+    minDownPayment?: number;
+    exactDownPayment?: number;
+}
+
+const formatOfferTerm = (frommonths?: number, tomonths?: number): string => {
+    if (frommonths !== undefined && tomonths !== undefined) {
+        if (frommonths === tomonths) {
+            return `${frommonths / 12} лет (${frommonths} мес.)`;
+        }
+        return `от ${Math.round(frommonths / 12)} до ${Math.round(tomonths / 12)} лет (${frommonths}–${tomonths} мес.)`;
+    }
+    if (tomonths !== undefined) {
+        return `до ${Math.round(tomonths / 12)} лет (до ${tomonths} мес.)`;
+    }
+    if (frommonths !== undefined) {
+        return `от ${Math.round(frommonths / 12)} лет (от ${frommonths} мес.)`;
+    }
+    return 'до 30 лет';
+};
+
+const formatOfferDownPayment = (offer: DetailedOffer): string => {
+    if (offer.exactDownPayment !== undefined) {
+        return `ПВ ${offer.exactDownPayment}%`;
+    }
+    if (offer.minDownPayment !== undefined) {
+        return `ПВ от ${offer.minDownPayment}%`;
+    }
+    return 'ПВ от 20.1%';
 };
 
 type OfferTermRule = {
@@ -328,7 +377,10 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
     const [mobileTab, setMobileTab] = useState<'inputs' | 'results'>('inputs'); // Состояние для мобильных вкладок
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [isRateInfoOpen, setIsRateInfoOpen] = useState(false);
-    const [tooltipHeight, setTooltipHeight] = useState(480); // Высота тултипа для позиционирования
+    const [rateModalTab, setRateModalTab] = useState<'matching' | 'all'>('matching');
+    const [rateModalProgramFilter, setRateModalProgramFilter] = useState<'all' | 'base' | 'family'>('all');
+    const [rateModalSearch, setRateModalSearch] = useState('');
+    const [tooltipHeight, setTooltipHeight] = useState(520); // Высота тултипа для позиционирования
     const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false); // Подтверждение закрытия
     const [tabToDelete, setTabToDelete] = useState<string | null>(null);
     const [showDebug, setShowDebug] = useState(false);
@@ -416,120 +468,182 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         return { has0, has10_5 };
     }, [propertyInfoToUse?.extraData, mortgageType]);
 
-    // result is moved down
-    const apiOffers = useMemo(() => {
-        const offers: Array<{
-            rate: string;
-            comment: string;
-            bankName?: string;
-            price?: number;
-            offerprice?: number;
-            frommonths?: number;
-            tomonths?: number;
-            subsidy?: boolean;
-            offertermUid?: string;
-            offertermName?: string;
-        }> = [];
+    // Расчет процента первоначального взноса
+    const downPaymentPercentage = useMemo(() => {
+        if (input.propertyValue === 0) return 0;
+        return (input.downPayment / input.propertyValue) * 100;
+    }, [input.downPayment, input.propertyValue]);
 
-        if (propertyInfoToUse?.extraData && Array.isArray(propertyInfoToUse.extraData)) {
-            propertyInfoToUse.extraData.forEach((group: any) => {
-                if (group.items && Array.isArray(group.items)) {
-                    group.items.forEach((item: any) => {
-                        const processOffer = (rateObj?: any) => {
-                            const baseOffer = {
-                                rate: rateObj ? rateObj.rate + '%' : '0%',
-                                comment: rateObj?.comment || '',
-                                bankName: item.bank?.name || '',
-                                price: item.price,
-                                offerprice: item.offerprice,
-                                frommonths: rateObj?.frommonths,
-                                tomonths: rateObj?.tomonths,
-                                subsidy: item.subsidy,
-                            };
+    // Полный реестр всех предложений по объекту (без фильтрации по полям калькулятора)
+    const allRawOffers = useMemo<DetailedOffer[]>(() => {
+        const list: DetailedOffer[] = [];
+        if (!propertyInfoToUse?.extraData || !Array.isArray(propertyInfoToUse.extraData)) {
+            return list;
+        }
 
-                            if (item.offerterms && Array.isArray(item.offerterms) && item.offerterms.length > 0) {
-                                item.offerterms.forEach((term: any) => {
-                                    offers.push({
-                                        ...baseOffer,
-                                        offertermUid: term.uid,
-                                        offertermName: term.name,
-                                    });
-                                });
-                            } else {
-                                offers.push({
-                                    ...baseOffer,
-                                    offertermUid: undefined,
-                                    offertermName: undefined,
-                                });
-                            }
+        propertyInfoToUse.extraData.forEach((group: any) => {
+            if (!group.items || !Array.isArray(group.items)) return;
+
+            group.items.forEach((item: any) => {
+                const processOffer = (rateObj?: any) => {
+                    const rawRate = rateObj?.rate;
+                    const rateNum = typeof rawRate === 'number'
+                        ? rawRate
+                        : (rawRate ? parseFloat(String(rawRate).replace(',', '.')) : 0);
+
+                    const baseOffer = {
+                        rate: rateObj ? `${rateObj.rate}%` : '0%',
+                        rateNum,
+                        comment: rateObj?.comment || '',
+                        bankName: item.bank?.name || '',
+                        bankOfferName: item.bankoffer?.name || '',
+                        price: item.price,
+                        offerprice: item.offerprice,
+                        relativePriceChange: item.relatevepricechange ?? item.relativePriceChange,
+                        frommonths: rateObj?.frommonths,
+                        tomonths: rateObj?.tomonths,
+                        subsidy: item.subsidy === true,
+                    };
+
+                    const handleTerm = (term?: any) => {
+                        let program: 'base' | 'family' = 'base';
+                        let minDownPayment: number | undefined = undefined;
+                        let exactDownPayment: number | undefined = undefined;
+
+                        const isFamilyProgram = (text?: string) => {
+                            if (!text) return false;
+                            return /(?:^|[\s\(\),.-])(семейн\w*|си)(?:[\s\(\),.-]|$)/i.test(text);
                         };
 
-                        if (item.rates && Array.isArray(item.rates) && item.rates.length > 0) {
-                            item.rates.forEach((rateObj: any) => {
-                                processOffer(rateObj);
-                            });
-                        } else {
-                            processOffer();
+                        if (term?.uid && OFFER_TERM_RULES[term.uid]) {
+                            const rule = OFFER_TERM_RULES[term.uid];
+                            if (rule.program) program = rule.program;
+                            minDownPayment = rule.minDownPayment;
+                            exactDownPayment = rule.exactDownPayment;
+                        } else if (
+                            isFamilyProgram(term?.name) ||
+                            isFamilyProgram(item.offer?.name) ||
+                            isFamilyProgram(item.bankoffer?.name)
+                        ) {
+                            program = 'family';
+                            minDownPayment = 20.1;
                         }
-                    });
+
+                        const uniqueId = `${item.offer?.uid || 'off'}_${term?.uid || 't'}_${rateNum}_${rateObj?.frommonths || 0}_${rateObj?.tomonths || 0}_${list.length}`;
+
+                        list.push({
+                            ...baseOffer,
+                            id: uniqueId,
+                            offerUid: item.offer?.uid,
+                            offerName: item.offer?.name,
+                            offertermUid: term?.uid,
+                            offertermName: term?.name || item.offer?.name,
+                            program,
+                            minDownPayment,
+                            exactDownPayment
+                        });
+                    };
+
+                    if (item.offerterms && Array.isArray(item.offerterms) && item.offerterms.length > 0) {
+                        item.offerterms.forEach((term: any) => handleTerm(term));
+                    } else {
+                        handleTerm(undefined);
+                    }
+                };
+
+                if (item.rates && Array.isArray(item.rates) && item.rates.length > 0) {
+                    item.rates.forEach((rateObj: any) => processOffer(rateObj));
+                } else {
+                    processOffer();
                 }
             });
-        }
-        let finalOffers = offers;
-        if (propertyInfoToUse?.extraData) {
-            const currentMonths = input.years * 12;
+        });
 
-            finalOffers = offers.filter(o => {
-                const fromMonthsMatch = typeof o.frommonths === 'number' ? currentMonths >= o.frommonths : true;
-                const toMonthsMatch = typeof o.tomonths === 'number' ? currentMonths <= o.tomonths : true;
-                if (!fromMonthsMatch || !toMonthsMatch) return false;
+        return list.sort((a, b) => a.rateNum - b.rateNum);
+    }, [propertyInfoToUse?.extraData]);
 
-                const currentDownpayment = input.propertyValue > 0 ? (input.downPayment / input.propertyValue) * 100 : 0;
-
-                if (o.offertermUid && OFFER_TERM_RULES[o.offertermUid]) {
-                    const rule = OFFER_TERM_RULES[o.offertermUid];
-
-                    if (Math.abs(currentDownpayment - 100) <= 0.1) {
-                        // Если ПВ 100%, применяем только условие полной оплаты (игнорируя программу и субсидию)
-                        return rule.exactDownPayment === 100;
-                    }
-
-                    if (rule.program && rule.program !== mortgageType) return false;
-
-                    const offerSubsidy = typeof o.subsidy === 'boolean' ? o.subsidy : rule.subsidy;
-                    if (offerSubsidy !== undefined) {
-                        const matchesCheckbox = hasSubsidy ? offerSubsidy === true : offerSubsidy === false;
-                        if (!matchesCheckbox) return false;
-                    }
-
-                    if (rule.exactDownPayment !== undefined) {
-                        if (Math.abs(currentDownpayment - rule.exactDownPayment) > 0.1) return false;
-                    }
-                    if (rule.minDownPayment !== undefined) {
-                        if (currentDownpayment < rule.minDownPayment - 0.1) return false;
-                    }
-
-                    return true;
-                }
-
-                if (Math.abs(currentDownpayment - 100) <= 0.1) {
-                    // Если ПВ 100%, обычные (fallback) предложения не показываем, только "Полную оплату"
-                    return false;
-                }
-
-                const subsidyMatch = hasSubsidy ? o.subsidy === true : !o.subsidy;
-                return subsidyMatch;
-            });
-        }
-
-        if (finalOffers.length === 0) {
+    // Предложения, подходящие под текущие фильтры калькулятора
+    const apiOffers = useMemo<DetailedOffer[]>(() => {
+        if (!propertyInfoToUse?.extraData || allRawOffers.length === 0) {
             return [
-                { rate: '12.5%', comment: 'Стандартная ставка без дополнительных условий' },
+                {
+                    id: 'default_standard',
+                    rate: '12.5%',
+                    rateNum: 12.5,
+                    comment: 'Стандартная ставка без дополнительных условий',
+                    bankName: '',
+                    subsidy: false,
+                    program: 'base'
+                }
             ];
         }
 
-        return finalOffers.sort((a, b) => parseFloat(b.rate) - parseFloat(a.rate));
-    }, [propertyInfoToUse?.extraData, hasSubsidy, input.years, mortgageType, input.downPayment, input.propertyValue]);
+        const currentMonths = input.years * 12;
+        const currentDownpayment = input.propertyValue > 0 ? (input.downPayment / input.propertyValue) * 100 : 0;
+
+        const filtered = allRawOffers.filter(o => {
+            const fromMonthsMatch = typeof o.frommonths === 'number' ? currentMonths >= o.frommonths : true;
+            const toMonthsMatch = typeof o.tomonths === 'number' ? currentMonths <= o.tomonths : true;
+            if (!fromMonthsMatch || !toMonthsMatch) return false;
+
+            if (o.offertermUid && OFFER_TERM_RULES[o.offertermUid]) {
+                const rule = OFFER_TERM_RULES[o.offertermUid];
+
+                if (Math.abs(currentDownpayment - 100) <= 0.1) {
+                    return rule.exactDownPayment === 100;
+                }
+
+                if (rule.program && rule.program !== mortgageType) return false;
+
+                const offerSubsidy = typeof o.subsidy === 'boolean' ? o.subsidy : rule.subsidy;
+                if (offerSubsidy !== undefined) {
+                    const matchesCheckbox = hasSubsidy ? offerSubsidy === true : offerSubsidy === false;
+                    if (!matchesCheckbox) return false;
+                }
+
+                if (rule.exactDownPayment !== undefined) {
+                    if (Math.abs(currentDownpayment - rule.exactDownPayment) > 0.1) return false;
+                }
+                if (rule.minDownPayment !== undefined) {
+                    if (currentDownpayment < rule.minDownPayment - 0.1) return false;
+                }
+
+                return true;
+            }
+
+            if (Math.abs(currentDownpayment - 100) <= 0.1) {
+                return false;
+            }
+
+            if (o.program && o.program !== mortgageType) return false;
+
+            const subsidyMatch = hasSubsidy ? o.subsidy === true : !o.subsidy;
+            return subsidyMatch;
+        });
+
+        return filtered.sort((a, b) => b.rateNum - a.rateNum);
+    }, [allRawOffers, propertyInfoToUse?.extraData, hasSubsidy, input.years, mortgageType, input.downPayment, input.propertyValue]);
+
+    // Отфильтрованные предложения для вкладки "Все условия" (фильтр по программе и поисковой строке)
+    const allOffersFiltered = useMemo<DetailedOffer[]>(() => {
+        return allRawOffers.filter(offer => {
+            if (rateModalProgramFilter !== 'all' && offer.program !== rateModalProgramFilter) {
+                return false;
+            }
+            if (rateModalSearch.trim()) {
+                const query = rateModalSearch.toLowerCase();
+                const matchBank = (offer.bankName || '').toLowerCase().includes(query);
+                const matchComment = (offer.comment || '').toLowerCase().includes(query);
+                const matchTerm = (offer.offertermName || '').toLowerCase().includes(query);
+                const matchOffer = (offer.bankOfferName || '').toLowerCase().includes(query);
+                const matchRate = offer.rate.toLowerCase().includes(query);
+                if (!matchBank && !matchComment && !matchTerm && !matchOffer && !matchRate) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }, [allRawOffers, rateModalProgramFilter, rateModalSearch]);
 
     // Находим измененную цену из текущих предложений (с минимальной ценой, если их несколько)
     const minOfferPrice = useMemo(() => {
@@ -545,17 +659,89 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         return selectedPrice;
     }, [apiOffers]);
 
-    // Расчет процента первоначального взноса
-    const downPaymentPercentage = useMemo(() => {
-        if (input.propertyValue === 0) return 0;
-        return (input.downPayment / input.propertyValue) * 100;
-    }, [input.downPayment, input.propertyValue]);
+    // Применение выбранного оффера в 1 клик
+    const handleApplyOffer = (offer: DetailedOffer) => {
+        const targetProgram = offer.program || 'base';
+        const targetSubsidy = offer.subsidy === true;
+
+        // Корректировка срока
+        let targetYears = input.years;
+        const currentMonths = Math.round(input.years * 12);
+        if (typeof offer.tomonths === 'number' && currentMonths > offer.tomonths) {
+            targetYears = offer.tomonths / 12;
+        } else if (typeof offer.frommonths === 'number' && currentMonths < offer.frommonths) {
+            targetYears = offer.frommonths / 12;
+        }
+
+        // Корректировка первоначального взноса
+        const currentDownPaymentPercent = input.propertyValue > 0
+            ? (input.downPayment / input.propertyValue) * 100
+            : 20.1;
+        let targetDownPaymentPercent = currentDownPaymentPercent;
+        if (offer.exactDownPayment !== undefined) {
+            targetDownPaymentPercent = offer.exactDownPayment;
+        } else if (offer.minDownPayment !== undefined && targetDownPaymentPercent < offer.minDownPayment) {
+            targetDownPaymentPercent = offer.minDownPayment;
+        }
+
+        const basePrice = offer.price || input.propertyValue;
+        const targetDownPayment = Math.round(basePrice * (targetDownPaymentPercent / 100));
+        const targetRate = offer.rateNum;
+
+        updateActiveCalc(c => ({
+            ...c,
+            mortgageType: targetProgram,
+            hasSubsidy: targetSubsidy,
+            rateInputValue: targetRate > 0 ? String(targetRate) : '',
+            selectedOfferId: offer.id,
+            input: {
+                ...c.input,
+                propertyValue: basePrice,
+                interestRate: targetRate,
+                years: targetYears,
+                downPayment: targetDownPayment
+            }
+        }));
+
+        setIsRateInfoOpen(false);
+    };
+
+    // Оффер, который в данный момент выбран / активен
+    const activeOffer = useMemo(() => {
+        // 1. Если был явно выбран оффер через окно "Узнать"
+        if (activeCalc.selectedOfferId) {
+            const found = allRawOffers.find(o => o.id === activeCalc.selectedOfferId);
+            if (found && Math.abs(found.rateNum - input.interestRate) < 0.01 && found.subsidy === hasSubsidy) {
+                return found;
+            }
+        }
+        // 2. Иначе ищем первое совпадение среди подходящих по ставке, программе и субсидии
+        if (input.interestRate > 0) {
+            const found = apiOffers.find(o =>
+                Math.abs(o.rateNum - input.interestRate) < 0.01 &&
+                (o.program ? o.program === mortgageType : true) &&
+                o.subsidy === hasSubsidy
+            );
+            if (found) return found;
+        }
+        return undefined;
+    }, [activeCalc.selectedOfferId, allRawOffers, apiOffers, input.interestRate, mortgageType, hasSubsidy]);
+
+    // Итоговая цена оффера:
+    // Если есть конкретный выбранный/активный оффер с ценой offerprice — берем строго её!
+    // Иначе берем минимальную цену из подходящих офферов (minOfferPrice)
+    const currentOfferPrice = useMemo(() => {
+        if (activeOffer && activeOffer.offerprice !== undefined) {
+            return activeOffer.offerprice;
+        }
+        return minOfferPrice;
+    }, [activeOffer, minOfferPrice]);
 
     const effectivePrice = useMemo(() => {
-        return (minOfferPrice !== undefined && minOfferPrice !== input.propertyValue)
-            ? minOfferPrice
+        return (currentOfferPrice !== undefined && currentOfferPrice !== input.propertyValue)
+            ? currentOfferPrice
             : input.propertyValue;
-    }, [minOfferPrice, input.propertyValue]);
+    }, [currentOfferPrice, input.propertyValue]);
 
     const [priceAlert, setPriceAlert] = useState(false);
     const prevPriceRef = useRef<number | undefined>(undefined);
@@ -740,8 +926,315 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         }
     };
 
+    const renderOfferCard = (item: DetailedOffer, isCatalogMode: boolean = false) => {
+        const isActive = activeCalc.selectedOfferId
+            ? item.id === activeCalc.selectedOfferId
+            : (
+                Math.abs(item.rateNum - input.interestRate) < 0.01 &&
+                (item.program ? item.program === mortgageType : true) &&
+                item.subsidy === hasSubsidy
+            );
+
+        return (
+            <div
+                key={item.id}
+                onClick={() => handleApplyOffer(item)}
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+                className={`p-3.5 rounded-2xl border transition-all !cursor-pointer select-none [&_*]:!cursor-pointer rate-modal-interactive group relative ${
+                    isActive
+                        ? 'bg-emerald-50/70 border-emerald-300 ring-1 ring-emerald-400 shadow-sm'
+                        : 'bg-white border-slate-200/80 hover:border-emerald-300 hover:shadow-md hover:bg-slate-50/50'
+                }`}
+            >
+                {/* Верхняя строка: Банк и Бейджи */}
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <div className="flex flex-col min-w-0 pr-1">
+                        <span className="text-xs font-bold text-slate-800 line-clamp-1">
+                            {item.bankName || 'Банк'}
+                        </span>
+                        {item.bankOfferName && item.bankOfferName !== item.bankName && (
+                            <span className="text-[11px] text-slate-500 line-clamp-1">
+                                {item.bankOfferName}
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
+                            item.program === 'family'
+                                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                : 'bg-slate-100 text-slate-700 border-slate-200'
+                        }`}>
+                            {item.program === 'family' ? 'Семейная' : 'Базовая'}
+                        </span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
+                            item.subsidy
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-slate-50 text-slate-500 border-slate-200'
+                        }`}>
+                            {item.subsidy ? 'С субсидией' : 'Без субсидии'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Средняя строка: Ставка и Расчетная цена квартиры */}
+                <div className="flex items-baseline justify-between gap-2 my-1.5">
+                    <div className="flex items-baseline gap-1.5">
+                        <span className={`text-xl font-extrabold ${isActive ? 'text-emerald-700' : 'text-slate-900 group-hover:text-emerald-700'}`}>
+                            {item.rate}
+                        </span>
+                        {isActive && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">
+                                <Check size={10} /> Активен
+                            </span>
+                        )}
+                    </div>
+                    {(item.offerprice !== undefined || item.price !== undefined) && (
+                        <div className="flex items-center gap-1.5 text-right">
+                            <span className="text-xs font-bold text-slate-800">
+                                {formatCurrency(item.offerprice ?? item.price ?? 0, true)}
+                            </span>
+                            {typeof item.relativePriceChange === 'number' && item.relativePriceChange !== 0 && (
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                    item.relativePriceChange > 0
+                                        ? 'bg-amber-100 text-amber-800'
+                                        : 'bg-emerald-100 text-emerald-800'
+                                }`}>
+                                    {item.relativePriceChange > 0 ? `+${item.relativePriceChange}%` : `${item.relativePriceChange}%`}
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Условия: Срок и ПВ */}
+                <div className="flex flex-wrap items-center gap-1.5 my-2">
+                    <span className="inline-flex items-center gap-1 text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                        <Calendar size={12} className="text-slate-400" />
+                        {formatOfferTerm(item.frommonths, item.tomonths)}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                        <Wallet size={12} className="text-slate-400" />
+                        {formatOfferDownPayment(item)}
+                    </span>
+                </div>
+
+                {/* Комментарий / условия по детям / категориям */}
+                {item.comment && (
+                    <p className="text-[11px] text-slate-500 leading-snug my-1 line-clamp-2">
+                        {item.comment}
+                    </p>
+                )}
+
+                {/* Кнопка действия / подсказка о применении в 1 клик */}
+                <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <span className="text-[11px] text-slate-400">
+                        {isActive ? 'Условия уже применены' : (isCatalogMode ? 'Применить оффер' : 'Выбрать предложение')}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 group-hover:text-emerald-800 group-hover:underline">
+                        {isActive ? 'Выбрано' : 'В 1 клик'}
+                        {!isActive && <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />}
+                    </span>
+                </div>
+
+                {showDebug && (
+                    <div className="mt-1.5 p-2 bg-slate-800 text-emerald-400 text-[10px] rounded leading-tight font-mono break-all">
+                        price: {item.price}<br />
+                        offerprice: {item.offerprice}<br />
+                        frommonths: {item.frommonths}<br />
+                        tomonths: {item.tomonths}<br />
+                        subsidy: {item.subsidy ? 'true' : 'false'}<br />
+                        offerUid: {item.offerUid || '—'}<br />
+                        termUid: {item.offertermUid || '— (в offerterms пусто)'}<br />
+                        name: {item.offertermName || item.offerName}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const renderRateModalContent = () => (
+        <>
+            <style>{`
+                .rate-modal-interactive,
+                .rate-modal-interactive *,
+                .rate-modal-interactive button,
+                .rate-modal-interactive span,
+                .rate-modal-interactive p,
+                .rate-modal-interactive svg {
+                    cursor: pointer !important;
+                    user-select: none !important;
+                    -webkit-user-select: none !important;
+                }
+            `}</style>
+            {/* Вкладочная навигация */}
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 shrink-0">
+                <div className="flex items-center p-1 bg-slate-100/90 rounded-xl gap-1 rate-modal-interactive" style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    <button
+                        type="button"
+                        onClick={() => setRateModalTab('matching')}
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all !cursor-pointer select-none [&_*]:!cursor-pointer ${
+                            rateModalTab === 'matching'
+                                ? 'bg-white text-emerald-700 shadow-sm'
+                                : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                    >
+                        <span style={{ cursor: 'pointer', userSelect: 'none' }} className="!cursor-pointer select-none">Подходящие</span>
+                        <span style={{ cursor: 'pointer', userSelect: 'none' }} className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold !cursor-pointer select-none ${
+                            rateModalTab === 'matching' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                        }`}>
+                            {apiOffers.length}
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setRateModalTab('all')}
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all !cursor-pointer select-none [&_*]:!cursor-pointer ${
+                            rateModalTab === 'all'
+                                ? 'bg-white text-emerald-700 shadow-sm'
+                                : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                    >
+                        <Sparkles size={13} style={{ cursor: 'pointer' }} className={`!cursor-pointer select-none ${rateModalTab === 'all' ? 'text-amber-500' : 'text-slate-400'}`} />
+                        <span style={{ cursor: 'pointer', userSelect: 'none' }} className="!cursor-pointer select-none">Все условия</span>
+                        <span style={{ cursor: 'pointer', userSelect: 'none' }} className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold !cursor-pointer select-none ${
+                            rateModalTab === 'all' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600'
+                        }`}>
+                            {allRawOffers.length}
+                        </span>
+                    </button>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => setIsRateInfoOpen(false)}
+                    style={{ cursor: 'pointer' }}
+                    className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors !cursor-pointer select-none [&_*]:!cursor-pointer"
+                    title="Закрыть"
+                >
+                    <X size={18} style={{ cursor: 'pointer' }} />
+                </button>
+            </div>
+
+            {/* Тулбар фильтров и поиска (только для вкладки "Все условия") */}
+            {rateModalTab === 'all' && (
+                <div className="mb-3 space-y-2 shrink-0">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none text-xs rate-modal-interactive">
+                        <button
+                            type="button"
+                            onClick={() => setRateModalProgramFilter('all')}
+                            style={{ cursor: 'pointer', userSelect: 'none' }}
+                            className={`px-2.5 py-1 rounded-lg font-medium transition-all whitespace-nowrap !cursor-pointer select-none [&_*]:!cursor-pointer ${
+                                rateModalProgramFilter === 'all'
+                                    ? 'bg-slate-800 text-white shadow-sm'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                        >
+                            Все ({allRawOffers.length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setRateModalProgramFilter('base')}
+                            style={{ cursor: 'pointer', userSelect: 'none' }}
+                            className={`px-2.5 py-1 rounded-lg font-medium transition-all whitespace-nowrap !cursor-pointer select-none [&_*]:!cursor-pointer ${
+                                rateModalProgramFilter === 'base'
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                            }`}
+                        >
+                            Базовая ({allRawOffers.filter(o => o.program === 'base').length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setRateModalProgramFilter('family')}
+                            style={{ cursor: 'pointer', userSelect: 'none' }}
+                            className={`px-2.5 py-1 rounded-lg font-medium transition-all whitespace-nowrap !cursor-pointer select-none [&_*]:!cursor-pointer ${
+                                rateModalProgramFilter === 'family'
+                                    ? 'bg-purple-600 text-white shadow-sm'
+                                    : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                            }`}
+                        >
+                            Семейная ({allRawOffers.filter(o => o.program === 'family').length})
+                        </button>
+                    </div>
+
+                    <div className="relative">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <input
+                            type="text"
+                            value={rateModalSearch}
+                            onChange={(e) => setRateModalSearch(e.target.value)}
+                            placeholder="Поиск по банку или условиям..."
+                            className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-800 placeholder-slate-400 focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                        />
+                        {rateModalSearch && (
+                            <button
+                                type="button"
+                                onClick={() => setRateModalSearch('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                            >
+                                <X size={12} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Список карточек */}
+            <div className="space-y-2.5 overflow-y-auto flex-1 pr-1 overscroll-contain">
+                {rateModalTab === 'matching' ? (
+                    apiOffers.length > 0 ? (
+                        apiOffers.map(item => renderOfferCard(item, false))
+                    ) : (
+                        <div className="py-8 text-center px-4">
+                            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+                                <Info size={22} />
+                            </div>
+                            <h5 className="text-sm font-bold text-slate-800 mb-1">Нет точных совпадений</h5>
+                            <p className="text-xs text-slate-500 mb-4 max-w-xs mx-auto leading-relaxed">
+                                Под текущие параметры (срок, взнос, субсидия) не найдено предложений. Посмотрите полный каталог всех программ банков.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => setRateModalTab('all')}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-200 transition-all cursor-pointer"
+                            >
+                                <Sparkles size={14} />
+                                Все условия ({allRawOffers.length})
+                            </button>
+                        </div>
+                    )
+                ) : (
+                    allOffersFiltered.length > 0 ? (
+                        allOffersFiltered.map(item => renderOfferCard(item, true))
+                    ) : (
+                        <div className="py-8 text-center px-4">
+                            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                                <Search size={22} />
+                            </div>
+                            <h5 className="text-sm font-bold text-slate-800 mb-1">Ничего не найдено</h5>
+                            <p className="text-xs text-slate-500 mb-3 max-w-xs mx-auto">
+                                Попробуйте изменить поисковый запрос или фильтр по программе.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setRateModalSearch('');
+                                    setRateModalProgramFilter('all');
+                                }}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition-all cursor-pointer"
+                            >
+                                Сбросить фильтры
+                            </button>
+                        </div>
+                    )
+                )}
+            </div>
+        </>
+    );
+
     return (
-        <div className="bg-white w-full h-full flex flex-col lg:flex-row overflow-hidden lg:rounded-2xl shadow-2xl relative">
+        <div className="bg-white w-full h-full max-h-[100dvh] flex flex-col lg:flex-row overflow-hidden lg:rounded-2xl shadow-2xl relative">
 
             {/* Тост с уведомлением об изменении цены */}
             <div className={`absolute top-4 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-lg z-50 transition-all duration-500 ease-out flex items-center gap-2 ${priceAlert ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-95 pointer-events-none'
@@ -781,8 +1274,13 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
 
 
             {/* Левая панель: Ввод данных */}
-            {/* Видимо на десктопе (lg) ИЛИ если вкладка 'inputs' (мобильные/планшеты) */}
-            <div className={`w-full lg:w-[400px] bg-slate-50 p-4 lg:p-6 overflow-y-auto border-r border-slate-200 shrink-0 ${mobileTab === 'inputs' ? 'block' : 'hidden lg:block'}`}>
+            {/* На мобильных (< lg) при mobileTab === 'inputs' занимает всю оставшуюся высоту (flex-1 min-h-0) и скроллится.
+                На десктопе (lg) фиксированная ширина 400px, высота во весь экран (lg:h-full) и свой скролл. */}
+            <div className={`w-full bg-slate-50 p-4 lg:p-6 border-r border-slate-200 overflow-y-auto overscroll-contain pb-16 lg:pb-6 ${
+                mobileTab === 'inputs' 
+                    ? 'flex-1 min-h-0 block' 
+                    : 'hidden lg:block'
+            } lg:flex-none lg:w-[400px] lg:h-full lg:shrink-0`}>
                 {/* Заголовок скрыт во вкладках, так как вкладки выполняют роль заголовка */}
                 <h2 className="hidden lg:block text-xl font-bold text-slate-800 mb-6">Параметры</h2>
 
@@ -875,9 +1373,9 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                 <Building2 size={16} className="text-slate-400" />
                                 Стоимость недвижимости
                                 {/* Индикатор изменения стоимости — показываем при наличии измененной цены */}
-                                {minOfferPrice !== undefined && minOfferPrice !== input.propertyValue && (
+                                {currentOfferPrice !== undefined && currentOfferPrice !== input.propertyValue && (
                                     <span className="relative group/discount inline-flex">
-                                        <span className={`flex items-center justify-center w-5 h-5 rounded-full cursor-help transition-colors ${minOfferPrice < input.propertyValue
+                                        <span className={`flex items-center justify-center w-5 h-5 rounded-full cursor-help transition-colors ${currentOfferPrice < input.propertyValue
                                             ? 'bg-emerald-100 text-emerald-600 group-hover/discount:bg-emerald-200'
                                             : 'bg-amber-100 text-amber-700 group-hover/discount:bg-amber-200'
                                             }`}>
@@ -885,7 +1383,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                         </span>
                                         {/* Тултип при наведении */}
                                         <span className="absolute left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 bottom-full mb-2 w-64 max-w-[280px] p-2.5 bg-slate-800 text-white text-[11px] font-normal leading-snug rounded-xl shadow-xl opacity-0 pointer-events-none group-hover/discount:opacity-100 transition-opacity duration-200 z-50 text-center sm:text-left">
-                                            {minOfferPrice < input.propertyValue
+                                            {currentOfferPrice < input.propertyValue
                                                 ? 'Стоимость снижена согласно выбранным условиям'
                                                 : 'Стоимость увеличена согласно выбранным условиям (субсидия)'}
                                             <span className="absolute left-1/2 -translate-x-1/2 sm:left-2.5 sm:translate-x-0 top-full w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-slate-800"></span>
@@ -895,7 +1393,7 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                             </span>
                         }
                         value={input.propertyValue}
-                        discountedValue={minOfferPrice}
+                        discountedValue={currentOfferPrice}
                         onChange={handlePropertyValueChange}
                         min={500000}
                         max={100000000}
@@ -1124,78 +1622,18 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                                         }
                                                     }
                                                 }}
-                                                className="absolute w-[420px] transition-all duration-200 rate-tooltip-container"
+                                                className="absolute w-[480px] max-w-[90vw] transition-all duration-200 rate-tooltip-container"
                                                 style={{
                                                     left: rect.right + 16,
                                                     top: tooltipTop,
                                                 }}
                                             >
-                                                <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-5 relative overflow-y-auto overscroll-contain" style={{ maxHeight: 'calc(100vh - 40px)' }}>
+                                                <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-5 relative flex flex-col overscroll-contain" style={{ maxHeight: 'calc(100vh - 40px)' }}>
                                                     {/* Стрелка влево — привязана к позиции кнопки */}
                                                     <div className="absolute right-full -translate-y-1/2" style={{ top: arrowTop }}>
                                                         <div className="w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-r-[8px] border-r-white drop-shadow-sm"></div>
                                                     </div>
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <h4 className="text-base font-bold text-slate-800">Условия кредитования</h4>
-                                                        <button
-                                                            onClick={() => setIsRateInfoOpen(false)}
-                                                            className="p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
-                                                        >
-                                                            <X size={16} />
-                                                        </button>
-                                                    </div>
-                                                    <div className="space-y-2.5">
-                                                        {apiOffers.map((item, idx) => (
-                                                            <div
-                                                                key={idx}
-                                                                onClick={() => {
-                                                                    const val = parseFloat(item.rate);
-                                                                    if (!isNaN(val)) {
-                                                                        setInput(prev => ({ ...prev, interestRate: val }));
-                                                                        setRateInputValue(String(val));
-                                                                        setIsRateInfoOpen(false);
-                                                                    }
-                                                                }}
-                                                                className={`flex items-start gap-3 p-3 rounded-xl border transition-colors !cursor-pointer select-none [&_*]:!cursor-pointer ${item.rate === input.interestRate + '%'
-                                                                    ? 'bg-emerald-50 border-emerald-200'
-                                                                    : 'bg-slate-50/50 border-slate-100 hover:bg-slate-50 hover:border-slate-200'
-                                                                    }`}
-                                                            >
-                                                                <div className="w-fit min-w-[4.5rem] pr-2 shrink-0 text-left">
-                                                                    <span className={`text-lg font-bold whitespace-nowrap !cursor-pointer ${item.rate === input.interestRate + '%' ? 'text-emerald-700' : 'text-slate-800'
-                                                                        }`}>{item.rate}</span>
-                                                                    {item.offerprice !== undefined && (
-                                                                        <span className="block text-[10px] text-slate-500 mt-0.5 whitespace-nowrap font-medium !cursor-pointer">
-                                                                            {formatCurrency(item.offerprice, true)}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex flex-col gap-0.5 pt-0.5 !cursor-pointer">
-                                                                    {item.bankName && <span className="text-xs font-bold text-slate-700 !cursor-pointer">{item.bankName}</span>}
-                                                                    {item.offertermName && <span className="text-xs font-semibold text-slate-600 !cursor-pointer">{item.offertermName}</span>}
-                                                                    <p className="text-xs text-slate-500 leading-relaxed !cursor-pointer">{item.comment}</p>
-                                                                    {(item.frommonths !== undefined || item.tomonths !== undefined) && (
-                                                                        <span className="text-[11px] text-slate-400 mt-0.5 block !cursor-pointer">
-                                                                            {item.frommonths !== undefined ? `От ${item.frommonths} ` : ''}
-                                                                            {item.tomonths !== undefined ? (item.frommonths !== undefined ? `до ${item.tomonths} ` : `До ${item.tomonths} `) : ''}
-                                                                            мес.
-                                                                        </span>
-                                                                    )}
-                                                                    {showDebug && (
-                                                                        <div className="mt-1.5 p-2 bg-slate-800 text-emerald-400 text-[10px] rounded leading-tight font-mono break-all">
-                                                                            price: {item.price}<br />
-                                                                            offerprice: {item.offerprice}<br />
-                                                                            frommonths: {item.frommonths}<br />
-                                                                            tomonths: {item.tomonths}<br />
-                                                                            subsidy: {item.subsidy ? 'true' : 'false'}<br />
-                                                                            uid: {item.offertermUid}<br />
-                                                                            name: {item.offertermName}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                                    {renderRateModalContent()}
                                                 </div>
                                             </div>
                                         </div>,
@@ -1215,72 +1653,12 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
                                 onClick={() => setIsRateInfoOpen(false)}
                             />
                             {/* Контент модалки */}
-                            <div className="relative w-full max-w-lg bg-white rounded-t-3xl p-6 pb-8 shadow-2xl animate-fade-in-up z-10 max-h-[75vh] flex flex-col">
+                            <div className="relative w-full max-w-lg bg-white rounded-t-3xl p-5 pb-8 shadow-2xl animate-fade-in-up z-10 max-h-[85vh] flex flex-col">
                                 {/* Индикатор свайпа */}
-                                <div className="flex justify-center mb-4 shrink-0">
+                                <div className="flex justify-center mb-3 shrink-0">
                                     <div className="w-10 h-1 bg-slate-300 rounded-full"></div>
                                 </div>
-                                <div className="flex items-center justify-between mb-5 shrink-0">
-                                    <h4 className="text-lg font-bold text-slate-800">Информация о ставке</h4>
-                                    <button
-                                        onClick={() => setIsRateInfoOpen(false)}
-                                        className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
-                                    >
-                                        <X size={20} />
-                                    </button>
-                                </div>
-                                <div className="space-y-3 overflow-y-auto flex-1 pr-2">
-                                    {apiOffers.map((item, idx) => (
-                                        <div
-                                            key={idx}
-                                            onClick={() => {
-                                                const val = parseFloat(item.rate);
-                                                if (!isNaN(val)) {
-                                                    setInput(prev => ({ ...prev, interestRate: val }));
-                                                    setRateInputValue(String(val));
-                                                    setIsRateInfoOpen(false);
-                                                }
-                                            }}
-                                            className={`flex items-start gap-3 p-3.5 rounded-2xl border transition-colors !cursor-pointer select-none [&_*]:!cursor-pointer ${item.rate === input.interestRate + '%'
-                                                ? 'bg-emerald-50 border-emerald-200'
-                                                : 'bg-slate-50/50 border-slate-100 hover:bg-slate-50 hover:border-slate-200'
-                                                }`}
-                                        >
-                                            <div className="w-fit min-w-[5rem] pr-2 shrink-0 text-left">
-                                                <span className={`text-xl font-bold whitespace-nowrap !cursor-pointer ${item.rate === input.interestRate + '%' ? 'text-emerald-700' : 'text-slate-800'
-                                                    }`}>{item.rate}</span>
-                                                {item.offerprice !== undefined && (
-                                                    <span className="block text-xs text-slate-500 mt-0.5 whitespace-nowrap font-medium !cursor-pointer">
-                                                        {formatCurrency(item.offerprice, true)}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-col gap-0.5 pt-0.5 !cursor-pointer">
-                                                {item.bankName && <span className="text-sm font-bold text-slate-700 !cursor-pointer">{item.bankName}</span>}
-                                                {item.offertermName && <span className="text-sm font-semibold text-slate-600 !cursor-pointer">{item.offertermName}</span>}
-                                                <p className="text-sm text-slate-500 leading-relaxed !cursor-pointer">{item.comment}</p>
-                                                {(item.frommonths !== undefined || item.tomonths !== undefined) && (
-                                                    <span className="text-xs text-slate-400 mt-0.5 block !cursor-pointer">
-                                                        {item.frommonths !== undefined ? `От ${item.frommonths} ` : ''}
-                                                        {item.tomonths !== undefined ? (item.frommonths !== undefined ? `до ${item.tomonths} ` : `До ${item.tomonths} `) : ''}
-                                                        мес.
-                                                    </span>
-                                                )}
-                                                {showDebug && (
-                                                    <div className="mt-1.5 p-2 bg-slate-800 text-emerald-400 text-[10px] rounded leading-tight font-mono break-all">
-                                                        price: {item.price}<br />
-                                                        offerprice: {item.offerprice}<br />
-                                                        frommonths: {item.frommonths}<br />
-                                                        tomonths: {item.tomonths}<br />
-                                                        subsidy: {item.subsidy ? 'true' : 'false'}<br />
-                                                        uid: {item.offertermUid}<br />
-                                                        name: {item.offertermName}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                {renderRateModalContent()}
                             </div>
                         </div>
                     )}
@@ -1319,9 +1697,9 @@ export const MortgageCalculator: React.FC<MortgageCalculatorProps> = ({ onClose,
         - Мобильные/Планшеты (< lg): Вкладки. Родитель обрабатывает скролл страницы (overflow-y-auto).
         - Десктоп (>= lg): Разделенный вид. Родитель имеет фиксированную высоту (overflow-hidden), внутренние контейнеры скроллятся.
       */}
-            <div className={`flex-1 h-full bg-white relative min-w-0 
-        ${mobileTab === 'results' ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'}
-        overflow-y-auto md:overflow-hidden
+            <div className={`flex-1 min-h-0 bg-white relative min-w-0 
+        ${mobileTab === 'results' ? 'flex flex-col overflow-y-auto overscroll-contain pb-16 lg:pb-0' : 'hidden lg:flex lg:flex-col'}
+        lg:h-full md:overflow-hidden
       `}>
                 {/* Кнопка закрытия только для десктопа */}
                 <button
